@@ -35,12 +35,14 @@ export function initGoogleClient(onAuthChange: (user: User | null) => void): Pro
                         scope: SCOPES,
                         callback: (tokenResponse: any) => {
                             if (tokenResponse.error) {
-                                console.error('Error during Google authentication:', tokenResponse);
-                                // Show a user-facing error. This is critical for debugging invalid credentials.
-                                alert(`Error de autenticación con Google: ${tokenResponse.error_description || tokenResponse.error}.\n\nEsto puede ocurrir si las credenciales (API Key, Client ID) no son válidas o no están configuradas correctamente.`);
-                                onAuthChange(null); // Ensure user is logged out
+                                // This can happen if silent login fails, which is an expected state.
+                                // We don't want to show a disruptive alert here.
+                                console.log('Auth token error:', tokenResponse.error);
+                                onAuthChange(null); // Ensure user is in logged-out state
                                 return;
                             }
+                            // IMPORTANT: The token from GIS must be passed to the GAPI client.
+                            gapi.client.setToken(tokenResponse);
                             updateLoginState(onAuthChange);
                         },
                     });
@@ -52,7 +54,13 @@ export function initGoogleClient(onAuthChange: (user: User | null) => void): Pro
                                 apiKey: API_KEY,
                                 discoveryDocs: DISCOVERY_DOCS,
                             });
-                            await updateLoginState(onAuthChange);
+                            
+                            // On page load, attempt a silent sign-in.
+                            // If the user is already signed in and has granted permissions,
+                            // this will succeed and the callback will be triggered with a new token.
+                            // If not, it will fail silently and the callback will handle the error.
+                            tokenClient.requestAccessToken({ prompt: 'none' });
+
                             resolve();
                         } catch (e) {
                             reject(e);
@@ -65,6 +73,7 @@ export function initGoogleClient(onAuthChange: (user: User | null) => void): Pro
         }, 100);
     });
 }
+
 
 /**
  * Actualiza el estado de login y obtiene el perfil del usuario.
