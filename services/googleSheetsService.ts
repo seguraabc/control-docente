@@ -34,17 +34,23 @@ export function initGoogleClient(onAuthChange: (user: User | null) => void): Pro
                         client_id: CLIENT_ID,
                         scope: SCOPES,
                         callback: (tokenResponse: any) => {
-                            if (tokenResponse.error) {
-                                // This can happen if silent login fails, which is an expected state.
-                                console.log('Auth token error:', tokenResponse.error);
-                                // Explicitly clear the token from GAPI on error to ensure a clean state.
+                            // A successful response contains an access_token.
+                            // A failed response might have an 'error' property (e.g., 'interaction_required'
+                            // during silent sign-in) or it might be a malformed response from a popup
+                            // that was closed or blocked by the browser.
+                            if (tokenResponse && tokenResponse.access_token) {
+                                // IMPORTANT: The token from GIS must be passed to the GAPI client.
+                                gapi.client.setToken(tokenResponse);
+                                updateLoginState(onAuthChange);
+                            } else {
+                                // This handles both explicit errors and cases where the token is missing.
+                                const errorMessage = tokenResponse?.error || 'No access token in response';
+                                console.log(`Auth token error: ${errorMessage}`);
+                                
+                                // Explicitly clear the token from GAPI to ensure a clean state.
                                 gapi.client.setToken(null);
                                 onAuthChange(null); // Ensure user is in logged-out state
-                                return;
                             }
-                            // IMPORTANT: The token from GIS must be passed to the GAPI client.
-                            gapi.client.setToken(tokenResponse);
-                            updateLoginState(onAuthChange);
                         },
                     });
 
