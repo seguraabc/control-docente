@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Student, AttendanceRecord, AttendanceStatus, ClassSession, SemesterDates } from '../types';
 import { DownloadIcon } from './icons';
 
@@ -79,14 +79,7 @@ const AttendanceButton: React.FC<{
 
 const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, classSessions, courseName, courseSchedule, semesterDates, onSetAttendance, onToggleClassSession }) => {
   const classDates = useMemo(() => generateClassDates(courseSchedule, semesterDates), [courseSchedule, semesterDates]);
-  const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
-
-  React.useEffect(() => {
-    const handleResize = () => setIsMobileView(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
+  
   if (!semesterDates || !semesterDates.firstSemester.startDate) {
     return (
         <div className="p-6 text-center">
@@ -118,7 +111,7 @@ const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, c
             a.status === 'P' &&
             taughtClassDates.includes(a.date)
         ).length;
-        const percentage = taughtClassesCount > 0 ? Math.round((presentCount / taughtClassesCount) * 100) : 100;
+        const percentage = taughtClassesCount > 0 ? Math.round((presentCount / taughtClassDates) * 100) : 100;
 
         return [studentName, ...attendanceStatuses, `${percentage}%`];
     });
@@ -152,87 +145,12 @@ const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, c
        </div>
     );
   }
-  
-  // Vista Móvil
-  if (isMobileView) {
-    return (
-        <div>
-            <div className="p-4 flex justify-end border-b border-gray-200 dark:border-gray-800">
-                <button
-                    onClick={handleExportCSV}
-                    className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 focus:ring-indigo-500"
-                >
-                    <DownloadIcon className="mr-2 h-5 w-5" />
-                    Exportar CSV
-                </button>
-            </div>
-            <div className="p-4 space-y-4">
-            {students.map((student) => {
-                const taughtClassesCount = taughtClassDates.length;
-                const presentCount = attendance.filter(a =>
-                    a.studentId === student.id &&
-                    a.status === 'P' &&
-                    taughtClassDates.includes(a.date)
-                ).length;
-                const percentage = taughtClassesCount > 0 ? Math.round((presentCount / taughtClassesCount) * 100) : 0;
-                
-                return (
-                    <div key={student.id} className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 shadow">
-                        <div className="flex justify-between items-center mb-3">
-                            <h3 className="font-bold text-gray-900 dark:text-gray-100">{student.lastName}, {student.firstName}</h3>
-                             <span className={`px-2 py-1 rounded-md text-xs font-semibold ${
-                                percentage >= 80 ? 'bg-green-100 dark:bg-green-500/20 text-green-800 dark:text-green-300' :
-                                percentage >= 50 ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-800 dark:text-yellow-300' :
-                                'bg-red-100 dark:bg-red-500/20 text-red-800 dark:text-red-300'
-                            }`}>
-                                {percentage}% Asistencia
-                            </span>
-                        </div>
-                        <div className="space-y-2">
-                        {classDates.map(date => {
-                             const session = classSessions.find(s => s.date === date);
-                             const isTaught = session ? session.taught : false;
-                             const dateLabel = new Date(date + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
-                             const currentStatus = getStatusForStudent(student.id, date);
 
-                             return (
-                                 <div key={date} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded">
-                                    <div className="flex items-center">
-                                         <input
-                                            type="checkbox"
-                                            checked={isTaught}
-                                            onChange={() => onToggleClassSession(date)}
-                                            className="w-4 h-4 mr-3 text-indigo-600 bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 cursor-pointer"
-                                            title={isTaught ? "Clase dictada" : "Clase no dictada"}
-                                        />
-                                        <span className="text-sm">{dateLabel}</span>
-                                    </div>
-                                     <div className="flex justify-center space-x-1">
-                                        {(['P', 'A', 'J'] as AttendanceStatus[]).map(status => (
-                                            <AttendanceButton
-                                                key={status}
-                                                currentStatus={currentStatus}
-                                                status={status}
-                                                onClick={() => onSetAttendance(student.id, date, status)}
-                                                disabled={!isTaught}
-                                            />
-                                        ))}
-                                    </div>
-                                 </div>
-                             )
-                        })}
-                        </div>
-                    </div>
-                )
-            })}
-            </div>
-        </div>
-    );
-  }
-
-  // Vista de Escritorio
   return (
     <div>
+      <div className="md:hidden portrait:flex landscape:hidden items-center justify-center p-4 text-center bg-yellow-100 dark:bg-yellow-800/50 text-yellow-800 dark:text-yellow-300 m-4 rounded-lg border border-yellow-300 dark:border-yellow-700">
+        <p className="font-semibold text-sm">Para una mejor experiencia, por favor rota tu dispositivo a modo horizontal.</p>
+      </div>
       <div className="p-4 flex justify-end border-b border-gray-200 dark:border-gray-800">
         <button
           onClick={handleExportCSV}
