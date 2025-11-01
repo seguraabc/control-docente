@@ -36,8 +36,9 @@ export function initGoogleClient(onAuthChange: (user: User | null) => void): Pro
                         callback: (tokenResponse: any) => {
                             if (tokenResponse.error) {
                                 // This can happen if silent login fails, which is an expected state.
-                                // We don't want to show a disruptive alert here.
                                 console.log('Auth token error:', tokenResponse.error);
+                                // Explicitly clear the token from GAPI on error to ensure a clean state.
+                                gapi.client.setToken(null);
                                 onAuthChange(null); // Ensure user is in logged-out state
                                 return;
                             }
@@ -104,13 +105,10 @@ async function updateLoginState(onAuthChange: (user: User | null) => void) {
 }
 
 export function handleSignIn() {
-    if (gapi.client.getToken() === null) {
-        // Al no especificar 'prompt', la pantalla de consentimiento solo aparecerá la primera vez
-        // o si el usuario revoca los permisos. En visitas posteriores, será automático.
-        tokenClient.requestAccessToken({ prompt: '' });
-    } else {
-        tokenClient.requestAccessToken({ prompt: '' });
-    }
+    // This will trigger the interactive login flow. The prompt is omitted,
+    // which defaults to showing the account chooser and then consent if needed.
+    // This is the correct behavior for a user-initiated login.
+    tokenClient.requestAccessToken({ prompt: '' });
 }
 
 export function handleSignOut() {
