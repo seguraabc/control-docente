@@ -24,7 +24,7 @@ const ConfigurationNeededScreen: React.FC = () => {
             Configuración Requerida para Conectar con Google
           </h1>
           <p className="text-md text-gray-400 mt-2">
-            ¡Ya casi está! Para que la aplicación pueda guardar tus datos de forma segura, necesita tus propias credenciales de API. Es un paso de seguridad estándar y solo necesitas hacerlo una vez.
+            ¡Ya casi está! Para que la aplicación pueda guardar tus datos de forma segura, necesita tus propias credenciales de API. Este proceso solo se hace una vez.
           </p>
         </header>
         
@@ -37,7 +37,7 @@ const ConfigurationNeededScreen: React.FC = () => {
           </Step>
 
           <Step number={2} title="Crea un Proyecto y Habilita las APIs">
-             <p>Si no tienes un proyecto, crea uno nuevo (ej: "Mi App Docente"). Luego, busca y habilita estas dos APIs:</p>
+             <p>Si no tienes un proyecto, crea uno nuevo. Luego, busca y habilita estas dos APIs:</p>
              <ul className="list-disc list-inside pl-2">
                 <li><code className="bg-gray-700 px-1 rounded">Google Sheets API</code></li>
                 <li><code className="bg-gray-700 px-1 rounded">Google Drive API</code> (necesaria para crear el archivo inicial)</li>
@@ -54,27 +54,47 @@ const ConfigurationNeededScreen: React.FC = () => {
                  <li>
                     <strong>Crear ID de cliente de OAuth:</strong><br/>
                     Vuelve a hacer clic en <strong>"+ Crear Credenciales"</strong> y selecciona <strong>"ID de cliente de OAuth"</strong>.
-                    <ul className="list-disc list-inside pl-4 mt-2 text-gray-500">
+                    <ul className="list-disc list-inside pl-4 mt-2 text-gray-500 space-y-2">
                         <li>Tipo de aplicación: <strong>Aplicación web</strong>.</li>
-                        <li><strong>Orígenes de JavaScript autorizados:</strong> Haz clic en <strong>"+ AÑADIR URI"</strong> y pega la URL exacta que ves en la barra de direcciones de tu navegador en este momento.</li>
+                        <li>
+                            <strong>Orígenes de JavaScript autorizados:</strong> Aquí debes añadir todas las URLs desde donde se ejecutará tu aplicación. Haz clic en <strong>"+ AÑADIR URI"</strong> para cada una:
+                            <ul className="list-[circle] list-inside pl-5 mt-1 text-gray-400">
+                                <li>Tu URL de desarrollo local (ej: <code className="bg-gray-700 px-1 rounded text-xs">http://localhost:5173</code>).</li>
+                                <li>Tu URL de producción final (ej: <code className="bg-gray-700 px-1 rounded text-xs">https://control-docente.vercel.app</code>).</li>
+                            </ul>
+                            <p className="mt-1 italic">Este paso es crucial. Si la URL de Vercel no está en la lista, el inicio de sesión fallará en producción.</p>
+                        </li>
                     </ul>
                      <p className="mt-2">Haz clic en "Crear" y copia el <strong>ID de cliente</strong>.</p>
                 </li>
             </ol>
           </Step>
           
-          <Step number={4} title="Actualiza el Archivo de Configuración">
-            <p>Abre el archivo <code className="bg-gray-700 px-1 rounded">config.ts</code> en el editor de código de la izquierda y pega las credenciales que acabas de copiar:</p>
-            <div className="bg-gray-800 p-3 rounded-md mt-2 text-sm">
-                <p><span className="text-gray-500">// 1. Pega tu Clave de API aquí:</span><br/>API_KEY: '<span className="text-yellow-300">TU_API_KEY</span>',</p>
-                <p className="mt-2"><span className="text-gray-500">// 2. Pega tu ID de cliente aquí:</span><br/>CLIENT_ID: '<span className="text-yellow-300">TU_CLIENT_ID.apps.googleusercontent.com</span>',</p>
+          <Step number={4} title="Configura tus Variables de Entorno">
+            <p>En lugar de editar el código, usarás variables de entorno. Esto es más seguro.</p>
+             <div className="mt-3">
+                <h4 className="font-semibold text-gray-200">Para Desarrollo Local:</h4>
+                <p>Crea un archivo llamado <code className="bg-gray-700 px-1 rounded">.env</code> en la raíz de tu proyecto (junto a `index.html`) y añade tus credenciales:</p>
+                <div className="bg-gray-800 p-3 rounded-md mt-2 text-sm font-mono">
+                    <p>VITE_GOOGLE_API_KEY="<span className="text-yellow-300">PEGA_TU_API_KEY_AQUI</span>"</p>
+                    <p>VITE_GOOGLE_CLIENT_ID="<span className="text-yellow-300">PEGA_TU_CLIENT_ID_AQUI</span>"</p>
+                </div>
+                 <p className="text-xs text-gray-500 mt-1">El prefijo `VITE_` es importante. No lo olvides.</p>
+            </div>
+             <div className="mt-4">
+                <h4 className="font-semibold text-gray-200">Para Producción (en Vercel):</h4>
+                <p>Ve a tu proyecto en Vercel, luego a <strong>Settings &rarr; Environment Variables</strong>. Añade las mismas dos variables:</p>
+                 <ul className="list-disc list-inside pl-2 mt-2">
+                    <li><code className="bg-gray-700 px-1 rounded">VITE_GOOGLE_API_KEY</code> con tu Clave de API como valor.</li>
+                    <li><code className="bg-gray-700 px-1 rounded">VITE_GOOGLE_CLIENT_ID</code> con tu ID de cliente como valor.</li>
+                 </ul>
             </div>
           </Step>
         </main>
 
         <footer className="mt-8 pt-4 border-t border-gray-700">
             <p className="text-sm text-gray-500">
-                Una vez que guardes los cambios en <code className="bg-gray-700 px-1 rounded">config.ts</code>, esta página se recargará automáticamente y podrás iniciar sesión.
+                Después de configurar tus variables de entorno, reinicia el servidor de desarrollo o vuelve a desplegar en Vercel. La aplicación funcionará automáticamente.
             </p>
         </footer>
       </div>

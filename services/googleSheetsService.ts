@@ -10,7 +10,7 @@ const API_KEY = GOOGLE_CONFIG.API_KEY;
 const CLIENT_ID = GOOGLE_CONFIG.CLIENT_ID;
 
 const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4", "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
-const SCOPES = "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file";
+const SCOPES = "https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email";
 const SPREADSHEET_NAME = 'ControlDocente_Datos';
 
 let tokenClient: any;

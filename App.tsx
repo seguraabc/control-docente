@@ -21,8 +21,8 @@ const useDebouncedEffect = (effect: () => void, deps: React.DependencyList, dela
 };
 
 const App: React.FC = () => {
-  // Verificación de configuración
-  if (GOOGLE_CONFIG.API_KEY === 'TU_API_KEY' || GOOGLE_CONFIG.CLIENT_ID.startsWith('TU_CLIENT_ID')) {
+  // Verificación de configuración a través de variables de entorno
+  if (!GOOGLE_CONFIG.API_KEY || !GOOGLE_CONFIG.CLIENT_ID) {
     return <ConfigurationNeededScreen />;
   }
 
