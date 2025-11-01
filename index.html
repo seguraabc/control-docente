@@ -5,12 +5,22 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Control Docente</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-      body {
-        background-color: #030712; /* bg-gray-950 */
+    <script>
+      // Configuración de Tailwind CSS para usar el modo oscuro basado en clases
+      tailwind.config = {
+        darkMode: 'class',
       }
-    </style>
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Script para evitar el parpadeo del tema (FOUC)
+      // Se ejecuta inmediatamente para establecer la clase 'dark' o 'light' antes de que se renderice el contenido
+      if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
   <script type="importmap">
 {
   "imports": {
@@ -24,7 +34,7 @@
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
 </head>
-  <body>
+  <body class="bg-gray-50 dark:bg-gray-950">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

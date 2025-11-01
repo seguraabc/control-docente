@@ -10,6 +10,8 @@ import ConfigurationNeededScreen from './components/ConfigurationNeededScreen';
 import { initGoogleClient, handleSignIn, handleSignOut, getSpreadsheetData, saveSpreadsheetData } from './services/googleSheetsService';
 import { GOOGLE_CONFIG } from './config';
 
+type Theme = 'light' | 'dark';
+
 // Custom Hook para ejecutar un efecto con debounce
 const useDebouncedEffect = (effect: () => void, deps: React.DependencyList, delay: number) => {
   useEffect(() => {
@@ -25,6 +27,24 @@ const App: React.FC = () => {
   if (!GOOGLE_CONFIG.API_KEY || !GOOGLE_CONFIG.CLIENT_ID) {
     return <ConfigurationNeededScreen />;
   }
+  
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (localStorage.getItem('theme')) {
+        return localStorage.getItem('theme') as Theme;
+    }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (theme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
 
   const [user, setUser] = useState<User | null>(null);
   const [appData, setAppData] = useState<AppData | null>(null);
@@ -199,19 +219,19 @@ const App: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-center">
-        <h1 className="text-3xl font-bold text-gray-100 mb-4">Control Docente</h1>
-        <p className="text-gray-400">Inicializando y conectando con Google...</p>
-        <div className="mt-4 border-4 border-gray-700 border-t-indigo-500 rounded-full w-8 h-8 animate-spin"></div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col items-center justify-center text-center">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">Control Docente</h1>
+        <p className="text-gray-600 dark:text-gray-400">Inicializando y conectando con Google...</p>
+        <div className="mt-4 border-4 border-gray-300 dark:border-gray-700 border-t-indigo-500 rounded-full w-8 h-8 animate-spin"></div>
       </div>
     );
   }
 
   if (initializationError) {
     return (
-      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center text-center p-4">
-        <h1 className="text-3xl font-bold text-red-400 mb-4">Error de Configuración</h1>
-        <p className="text-gray-400 max-w-md">{initializationError}</p>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col items-center justify-center text-center p-4">
+        <h1 className="text-3xl font-bold text-red-600 dark:text-red-400 mb-4">Error de Configuración</h1>
+        <p className="text-gray-600 dark:text-gray-400 max-w-md">{initializationError}</p>
       </div>
     );
   }
@@ -222,15 +242,15 @@ const App: React.FC = () => {
   
   if (!appData) {
       return (
-         <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-            <p className="text-gray-400">Cargando datos del usuario...</p>
+         <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+            <p className="text-gray-600 dark:text-gray-400">Cargando datos del usuario...</p>
          </div>
       );
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-200 font-sans">
-      <Header user={user} onLogout={handleLogout} />
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-200 font-sans">
+      <Header user={user} onLogout={handleLogout} theme={theme} setTheme={setTheme} />
        {isSaving && (
         <div className="fixed bottom-4 right-4 bg-green-600/90 text-white text-sm px-4 py-2 rounded-lg shadow-lg z-50 animate-pulse">
             Guardando...

@@ -89,20 +89,20 @@ const GradesGrid: React.FC<GradesGridProps> = ({
 
   return (
     <div>
-      <div className="p-4 flex justify-end border-b border-gray-800">
+      <div className="p-4 flex justify-end border-b border-gray-200 dark:border-gray-800">
         <button
           onClick={handleAddInstance}
-          className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-950 focus:ring-indigo-500"
+          className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 focus:ring-indigo-500"
         >
           <PlusIcon className="mr-2 h-5 w-5" />
           Agregar Instancia
         </button>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-max text-sm text-left text-gray-300">
-          <thead className="text-xs text-gray-400 uppercase bg-gray-800">
+        <table className="w-full min-w-max text-sm text-left text-gray-700 dark:text-gray-300">
+          <thead className="text-xs text-gray-700 dark:text-gray-400 uppercase bg-gray-100 dark:bg-gray-800">
             <tr>
-              <th scope="col" className="px-4 py-3 sticky left-0 bg-gray-800 z-10 min-w-[150px]">
+              <th scope="col" className="px-4 py-3 sticky left-0 bg-gray-100 dark:bg-gray-800 z-10 min-w-[150px]">
                 Estudiante
               </th>
               {sortedInstances.map((instance) => (
@@ -123,8 +123,8 @@ const GradesGrid: React.FC<GradesGridProps> = ({
           </thead>
           <tbody>
             {students.map((student) => (
-              <tr key={student.id} className="border-b border-gray-700 hover:bg-gray-800/50">
-                <td className="px-4 py-2 font-medium text-gray-200 sticky left-0 bg-gray-900/50 hover:bg-gray-800/50 z-10">
+              <tr key={student.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                <td className="px-4 py-2 font-medium text-gray-900 dark:text-gray-200 sticky left-0 bg-white dark:bg-gray-900 z-10">
                   {student.lastName}, {student.firstName}
                 </td>
                 {sortedInstances.map((instance) => (
@@ -133,7 +133,7 @@ const GradesGrid: React.FC<GradesGridProps> = ({
                       type="text"
                       value={getGradeForStudent(student.id, instance.id)}
                       onChange={(e) => handleGradeChange(student.id, instance.id, e.target.value)}
-                      className="w-16 h-8 text-center bg-gray-700 border border-gray-600 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-16 h-8 text-center bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       maxLength={2}
                     />
                   </td>

@@ -27,7 +27,7 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
 
   return (
     <div className="p-6">
-      <h2 className="text-xl font-bold text-gray-100 mb-4">
+      <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
         Lista de Estudiantes
       </h2>
       
@@ -38,7 +38,7 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             placeholder="Nombre"
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
         </div>
         <div className="w-full">
@@ -47,7 +47,7 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             placeholder="Apellido"
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
         </div>
         <button type="submit" className="w-full sm:w-auto flex-shrink-0 flex items-center justify-center px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-colors duration-200">
@@ -55,16 +55,16 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
             Agregar
         </button>
       </form>
-       {error && <p className="text-red-400 text-sm mb-4 -mt-2">{error}</p>}
+       {error && <p className="text-red-500 dark:text-red-400 text-sm mb-4 -mt-2">{error}</p>}
 
       <div className="space-y-3">
         {students.length > 0 ? (
           students.map((student, index) => (
-            <div key={student.id} className="flex items-center justify-between bg-gray-800 p-3 rounded-md">
-              <span className="text-gray-300">{index + 1}. {student.lastName}, {student.firstName}</span>
+            <div key={student.id} className="flex items-center justify-between bg-gray-100 dark:bg-gray-800 p-3 rounded-md">
+              <span className="text-gray-800 dark:text-gray-300">{index + 1}. {student.lastName}, {student.firstName}</span>
               <button
                 onClick={() => onDeleteStudent(student.id)}
-                className="text-gray-500 hover:text-red-400 transition-colors p-1 rounded-full"
+                className="text-gray-500 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors p-1 rounded-full"
                 aria-label={`Eliminar a ${student.firstName} ${student.lastName}`}
               >
                 <TrashIcon />
@@ -72,7 +72,7 @@ const StudentList: React.FC<StudentListProps> = ({ students, onAddStudent, onDel
             </div>
           ))
         ) : (
-          <p className="text-gray-500 text-center py-4">No hay estudiantes en este curso.</p>
+          <p className="text-gray-500 dark:text-gray-500 text-center py-4">No hay estudiantes en este curso.</p>
         )}
       </div>
     </div>

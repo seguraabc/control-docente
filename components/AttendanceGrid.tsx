@@ -58,7 +58,7 @@ const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, c
   if (!semesterDates || !semesterDates.firstSemester.startDate) {
     return (
         <div className="p-6 text-center">
-            <p className="text-gray-400">Por favor, configure las fechas de inicio y fin de los cuatrimestres.</p>
+            <p className="text-gray-600 dark:text-gray-400">Por favor, configure las fechas de inicio y fin de los cuatrimestres.</p>
             <p className="text-sm text-gray-500 mt-2">Puede hacerlo desde el panel principal, usando el ícono de engranaje.</p>
         </div>
     );
@@ -104,7 +104,7 @@ const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, c
         ...rows.map(row => toCSV(row))
     ].join('\n');
     
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
@@ -122,27 +122,27 @@ const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, c
   if (students.length === 0) {
     return (
        <div className="p-6 text-center">
-         <p className="text-gray-500">Agrega estudiantes para poder registrar la asistencia.</p>
+         <p className="text-gray-500 dark:text-gray-500">Agrega estudiantes para poder registrar la asistencia.</p>
        </div>
     );
   }
   
   return (
     <div>
-      <div className="p-4 flex justify-end border-b border-gray-800">
+      <div className="p-4 flex justify-end border-b border-gray-200 dark:border-gray-800">
         <button
           onClick={handleExportCSV}
-          className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-950 focus:ring-indigo-500"
+          className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 focus:ring-indigo-500"
         >
           <DownloadIcon className="mr-2 h-5 w-5" />
           Exportar CSV
         </button>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-max text-sm text-left text-gray-300">
-            <thead className="text-xs text-gray-400 uppercase bg-gray-800">
+        <table className="w-full min-w-max text-sm text-left text-gray-700 dark:text-gray-300">
+            <thead className="text-xs text-gray-700 dark:text-gray-400 uppercase bg-gray-100 dark:bg-gray-800">
             <tr>
-                <th scope="col" className="px-4 py-3 sticky left-0 bg-gray-800 z-10 min-w-[150px]">
+                <th scope="col" className="px-4 py-3 sticky left-0 bg-gray-100 dark:bg-gray-800 z-10 min-w-[150px]">
                 Estudiante
                 </th>
                 {classDates.map(date => {
@@ -157,7 +157,7 @@ const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, c
                                     type="checkbox"
                                     checked={isTaught}
                                     onChange={() => onToggleClassSession(date)}
-                                    className="w-4 h-4 text-indigo-600 bg-gray-700 border-gray-600 rounded focus:ring-indigo-600 focus:ring-offset-gray-800 cursor-pointer"
+                                    className="w-4 h-4 text-indigo-600 bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 focus:ring-offset-gray-100 dark:focus:ring-offset-gray-800 cursor-pointer"
                                     aria-label={`Marcar clase del ${dateLabel} como ${isTaught ? 'no dictada' : 'dictada'}`}
                                     title={isTaught ? "Clase dictada (cuenta para asistencia)" : "Clase no dictada (marcar para tomar asistencia)"}
                                 />
@@ -165,7 +165,7 @@ const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, c
                         </th>
                     )
                 })}
-                <th scope="col" className="px-4 py-3 text-center sticky right-0 bg-gray-800 z-10">
+                <th scope="col" className="px-4 py-3 text-center sticky right-0 bg-gray-100 dark:bg-gray-800 z-10">
                     Asistencia %
                 </th>
             </tr>
@@ -182,8 +182,8 @@ const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, c
                 const percentage = taughtClassesCount > 0 ? Math.round((presentCount / taughtClassesCount) * 100) : 0;
 
                 return (
-                    <tr key={student.id} className="border-b border-gray-700 hover:bg-gray-800/50">
-                    <td className="px-4 py-2 font-medium text-gray-200 sticky left-0 bg-gray-900/50 hover:bg-gray-800/50 z-10">
+                    <tr key={student.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                    <td className="px-4 py-2 font-medium text-gray-900 dark:text-gray-200 sticky left-0 bg-white dark:bg-gray-900 z-10">
                         {student.lastName}, {student.firstName}
                     </td>
                     {classDates.map(date => {
@@ -199,7 +199,7 @@ const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, c
                                     onClick={() => onSetAttendance(student.id, date, status)}
                                     disabled={!isTaught}
                                     className={`w-7 h-7 font-bold rounded-full transition-all duration-200 text-xs
-                                        ${currentStatus === status && isTaught ? statusColors[status] + ' opacity-100' : 'bg-gray-700 text-gray-300'}
+                                        ${currentStatus === status && isTaught ? statusColors[status] + ' opacity-100' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-300'}
                                         ${!isTaught ? 'opacity-30 cursor-not-allowed' : `hover:${statusColors[status].split(' ')[1]} opacity-60 hover:opacity-100`}
                                     `}
                                     >
@@ -210,11 +210,11 @@ const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, c
                         </td>
                         );
                     })}
-                    <td className="px-4 py-2 text-center font-medium sticky right-0 bg-gray-900/50 hover:bg-gray-800/50 z-10">
+                    <td className="px-4 py-2 text-center font-medium sticky right-0 bg-white dark:bg-gray-900 z-10">
                         <span className={`px-2 py-1 rounded-md text-xs font-semibold ${
-                            percentage >= 80 ? 'bg-green-500/20 text-green-300' :
-                            percentage >= 50 ? 'bg-yellow-500/20 text-yellow-300' :
-                            'bg-red-500/20 text-red-300'
+                            percentage >= 80 ? 'bg-green-100 dark:bg-green-500/20 text-green-800 dark:text-green-300' :
+                            percentage >= 50 ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-800 dark:text-yellow-300' :
+                            'bg-red-100 dark:bg-red-500/20 text-red-800 dark:text-red-300'
                         }`}>
                             {percentage}%
                         </span>

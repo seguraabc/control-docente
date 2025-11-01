@@ -34,21 +34,21 @@ const CourseDetail: React.FC<CourseDetailProps> = (props) => {
   return (
     <div>
       <div className="mb-6">
-        <button onClick={onBack} className="text-indigo-400 hover:text-indigo-300 transition-colors">
+        <button onClick={onBack} className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
           &larr; Volver a Mis Cursos
         </button>
-        <h1 className="text-3xl font-bold text-gray-100 mt-2">{course.name}</h1>
-        <p className="text-gray-400">{course.schedule}</p>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mt-2">{course.name}</h1>
+        <p className="text-gray-600 dark:text-gray-400">{course.schedule}</p>
       </div>
 
-      <div className="border-b border-gray-700 mb-6">
+      <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
         <nav className="-mb-px flex space-x-6" aria-label="Tabs">
           <button
             onClick={() => setActiveTab('students')}
             className={`${
               activeTab === 'students'
-                ? 'border-indigo-500 text-indigo-400'
-                : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'
+                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-400 dark:hover:border-gray-500'
             } whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors`}
           >
             Estudiantes ({students.length})
@@ -57,8 +57,8 @@ const CourseDetail: React.FC<CourseDetailProps> = (props) => {
             onClick={() => setActiveTab('attendance')}
             className={`${
               activeTab === 'attendance'
-                ? 'border-indigo-500 text-indigo-400'
-                : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'
+                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-400 dark:hover:border-gray-500'
             } whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors`}
           >
             Asistencia
@@ -67,8 +67,8 @@ const CourseDetail: React.FC<CourseDetailProps> = (props) => {
             onClick={() => setActiveTab('grades')}
             className={`${
               activeTab === 'grades'
-                ? 'border-indigo-500 text-indigo-400'
-                : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'
+                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+                : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-400 dark:hover:border-gray-500'
             } whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors`}
           >
             Calificaciones
@@ -76,7 +76,7 @@ const CourseDetail: React.FC<CourseDetailProps> = (props) => {
         </nav>
       </div>
 
-      <div className="bg-gray-900 rounded-lg shadow-lg">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg">
         {activeTab === 'students' && (
           <StudentList
             students={props.students}
