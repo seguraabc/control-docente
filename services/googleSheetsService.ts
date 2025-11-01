@@ -96,7 +96,9 @@ async function updateLoginState(onAuthChange: (user: User | null) => void) {
 
 export function handleSignIn() {
     if (gapi.client.getToken() === null) {
-        tokenClient.requestAccessToken({ prompt: 'consent' });
+        // Al no especificar 'prompt', la pantalla de consentimiento solo aparecerá la primera vez
+        // o si el usuario revoca los permisos. En visitas posteriores, será automático.
+        tokenClient.requestAccessToken({ prompt: '' });
     } else {
         tokenClient.requestAccessToken({ prompt: '' });
     }
