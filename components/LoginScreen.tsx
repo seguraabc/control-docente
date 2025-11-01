@@ -1,5 +1,6 @@
 import React from 'react';
 import { GoogleIcon } from './icons';
+import { FullLogo } from './Logo';
 
 interface LoginScreenProps {
   onLogin: () => void;
@@ -10,11 +11,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, isReady }) => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md text-center">
-        <header className="mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-            Control Docente
-          </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400">
+        <header className="mb-8 flex flex-col items-center">
+          <FullLogo className="w-auto h-40" />
+          <p className="text-lg text-gray-600 dark:text-gray-400 mt-4">
             Gestiona tus cursos de forma sencilla y segura.
           </p>
         </header>

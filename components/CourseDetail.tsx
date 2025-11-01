@@ -14,6 +14,7 @@ interface CourseDetailProps {
   semesterDates: SemesterDates | null;
   onBack: () => void;
   onAddStudent: (studentData: Omit<Student, 'id' | 'courseId'>) => void;
+  onAddMultipleStudents: (studentsData: Omit<Student, 'id' | 'courseId'>[]) => void;
   onDeleteStudent: (studentId: string) => void;
   onSetAttendance: (studentId: string, date: string, status: AttendanceStatus) => void;
   onToggleClassSession: (date: string) => void;
@@ -81,6 +82,7 @@ const CourseDetail: React.FC<CourseDetailProps> = (props) => {
           <StudentList
             students={props.students}
             onAddStudent={props.onAddStudent}
+            onAddMultipleStudents={props.onAddMultipleStudents}
             onDeleteStudent={props.onDeleteStudent}
           />
         )}

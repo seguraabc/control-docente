@@ -9,6 +9,7 @@ import SemesterSettingsModal from './components/SemesterSettingsModal';
 import ConfigurationNeededScreen from './components/ConfigurationNeededScreen';
 import { initGoogleClient, handleSignIn, handleSignOut, getSpreadsheetData, saveSpreadsheetData } from './services/googleSheetsService';
 import { GOOGLE_CONFIG } from './config';
+import { FullLogo } from './components/Logo';
 
 type Theme = 'light' | 'dark';
 
@@ -149,6 +150,16 @@ const App: React.FC = () => {
     const newStudent: Student = { id: `s${Date.now()}`, courseId: selectedCourseId, ...studentData };
     setStudents(prev => [...prev, newStudent]);
   }, [selectedCourseId]);
+
+  const handleAddMultipleStudents = useCallback((studentsData: Omit<Student, 'id' | 'courseId'>[]) => {
+    if (!selectedCourseId) return;
+    const newStudents: Student[] = studentsData.map((studentData, index) => ({
+        id: `s${Date.now() + index}`,
+        courseId: selectedCourseId,
+        ...studentData
+    }));
+    setStudents(prev => [...prev, ...newStudents]);
+  }, [selectedCourseId]);
   
   const handleDeleteStudent = useCallback((studentId: string) => {
     setStudents(prev => prev.filter(s => s.id !== studentId));
@@ -219,8 +230,8 @@ const App: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col items-center justify-center text-center">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">Control Docente</h1>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col items-center justify-center text-center p-4">
+        <FullLogo className="w-auto h-32 mb-4" />
         <p className="text-gray-600 dark:text-gray-400">Inicializando y conectando con Google...</p>
         <div className="mt-4 border-4 border-gray-300 dark:border-gray-700 border-t-indigo-500 rounded-full w-8 h-8 animate-spin"></div>
       </div>
@@ -277,6 +288,7 @@ const App: React.FC = () => {
             semesterDates={appData.semesterDates}
             onBack={handleBackToDashboard}
             onAddStudent={handleAddStudent}
+            onAddMultipleStudents={handleAddMultipleStudents}
             onDeleteStudent={handleDeleteStudent}
             onSetAttendance={handleSetAttendance}
             onToggleClassSession={handleToggleClassSession}

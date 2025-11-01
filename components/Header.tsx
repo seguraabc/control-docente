@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User } from '../types';
 import { LogoutIcon, SunIcon, MoonIcon } from './icons';
+import { LogoIcon } from './Logo';
 
 type Theme = 'light' | 'dark';
 
@@ -34,7 +35,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, theme, setTheme }) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
-            <h1 className="text-xl font-bold text-indigo-600 dark:text-indigo-400">Control Docente</h1>
+            <LogoIcon className="h-9 w-9" />
           </div>
           <div className="flex items-center gap-4">
              <button

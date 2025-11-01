@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Student, AttendanceRecord, AttendanceStatus, ClassSession, SemesterDates } from '../types';
 import { DownloadIcon } from './icons';
 
@@ -51,9 +51,41 @@ const generateClassDates = (schedule: string, semesterDates: SemesterDates | nul
     return allDates;
 };
 
+const AttendanceButton: React.FC<{
+    currentStatus?: AttendanceStatus;
+    status: AttendanceStatus;
+    onClick: () => void;
+    disabled: boolean;
+}> = ({ currentStatus, status, onClick, disabled }) => {
+    const statusColors: { [key in AttendanceStatus]: string } = {
+        P: 'bg-green-500 hover:bg-green-600 text-white',
+        A: 'bg-red-500 hover:bg-red-600 text-white',
+        J: 'bg-yellow-500 hover:bg-yellow-600 text-white',
+    };
+    return (
+        <button
+            onClick={onClick}
+            disabled={disabled}
+            className={`w-7 h-7 font-bold rounded-full transition-all duration-200 text-xs
+                ${currentStatus === status && !disabled ? statusColors[status] + ' opacity-100' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-300'}
+                ${disabled ? 'opacity-30 cursor-not-allowed' : `hover:${statusColors[status].split(' ')[1]} opacity-60 hover:opacity-100`}
+            `}
+        >
+            {status}
+        </button>
+    );
+};
+
 
 const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, classSessions, courseName, courseSchedule, semesterDates, onSetAttendance, onToggleClassSession }) => {
   const classDates = useMemo(() => generateClassDates(courseSchedule, semesterDates), [courseSchedule, semesterDates]);
+  const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
+
+  React.useEffect(() => {
+    const handleResize = () => setIsMobileView(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   if (!semesterDates || !semesterDates.firstSemester.startDate) {
     return (
@@ -66,12 +98,6 @@ const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, c
 
   const getStatusForStudent = (studentId: string, date: string) => {
     return attendance.find(a => a.studentId === studentId && a.date === date)?.status;
-  };
-
-  const statusColors: { [key in AttendanceStatus]: string } = {
-    P: 'bg-green-500 hover:bg-green-600 text-white',
-    A: 'bg-red-500 hover:bg-red-600 text-white',
-    J: 'bg-yellow-500 hover:bg-yellow-600 text-white',
   };
   
   const taughtClassDates = useMemo(() => classDates.filter(date => {
@@ -127,6 +153,84 @@ const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, c
     );
   }
   
+  // Vista Móvil
+  if (isMobileView) {
+    return (
+        <div>
+            <div className="p-4 flex justify-end border-b border-gray-200 dark:border-gray-800">
+                <button
+                    onClick={handleExportCSV}
+                    className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 focus:ring-indigo-500"
+                >
+                    <DownloadIcon className="mr-2 h-5 w-5" />
+                    Exportar CSV
+                </button>
+            </div>
+            <div className="p-4 space-y-4">
+            {students.map((student) => {
+                const taughtClassesCount = taughtClassDates.length;
+                const presentCount = attendance.filter(a =>
+                    a.studentId === student.id &&
+                    a.status === 'P' &&
+                    taughtClassDates.includes(a.date)
+                ).length;
+                const percentage = taughtClassesCount > 0 ? Math.round((presentCount / taughtClassesCount) * 100) : 0;
+                
+                return (
+                    <div key={student.id} className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 shadow">
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="font-bold text-gray-900 dark:text-gray-100">{student.lastName}, {student.firstName}</h3>
+                             <span className={`px-2 py-1 rounded-md text-xs font-semibold ${
+                                percentage >= 80 ? 'bg-green-100 dark:bg-green-500/20 text-green-800 dark:text-green-300' :
+                                percentage >= 50 ? 'bg-yellow-100 dark:bg-yellow-500/20 text-yellow-800 dark:text-yellow-300' :
+                                'bg-red-100 dark:bg-red-500/20 text-red-800 dark:text-red-300'
+                            }`}>
+                                {percentage}% Asistencia
+                            </span>
+                        </div>
+                        <div className="space-y-2">
+                        {classDates.map(date => {
+                             const session = classSessions.find(s => s.date === date);
+                             const isTaught = session ? session.taught : false;
+                             const dateLabel = new Date(date + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+                             const currentStatus = getStatusForStudent(student.id, date);
+
+                             return (
+                                 <div key={date} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded">
+                                    <div className="flex items-center">
+                                         <input
+                                            type="checkbox"
+                                            checked={isTaught}
+                                            onChange={() => onToggleClassSession(date)}
+                                            className="w-4 h-4 mr-3 text-indigo-600 bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 cursor-pointer"
+                                            title={isTaught ? "Clase dictada" : "Clase no dictada"}
+                                        />
+                                        <span className="text-sm">{dateLabel}</span>
+                                    </div>
+                                     <div className="flex justify-center space-x-1">
+                                        {(['P', 'A', 'J'] as AttendanceStatus[]).map(status => (
+                                            <AttendanceButton
+                                                key={status}
+                                                currentStatus={currentStatus}
+                                                status={status}
+                                                onClick={() => onSetAttendance(student.id, date, status)}
+                                                disabled={!isTaught}
+                                            />
+                                        ))}
+                                    </div>
+                                 </div>
+                             )
+                        })}
+                        </div>
+                    </div>
+                )
+            })}
+            </div>
+        </div>
+    );
+  }
+
+  // Vista de Escritorio
   return (
     <div>
       <div className="p-4 flex justify-end border-b border-gray-200 dark:border-gray-800">
@@ -142,15 +246,15 @@ const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, c
         <table className="w-full min-w-max text-sm text-left text-gray-700 dark:text-gray-300">
             <thead className="text-xs text-gray-700 dark:text-gray-400 uppercase bg-gray-100 dark:bg-gray-800">
             <tr>
-                <th scope="col" className="px-4 py-3 sticky left-0 bg-gray-100 dark:bg-gray-800 z-10 min-w-[150px]">
+                <th scope="col" className="px-4 py-3 sticky left-0 bg-gray-100 dark:bg-gray-800 z-10 min-w-[200px]">
                 Estudiante
                 </th>
                 {classDates.map(date => {
                     const session = classSessions.find(s => s.date === date);
-                    const isTaught = session ? session.taught : false; // Por defecto, la clase no está dictada
+                    const isTaught = session ? session.taught : false;
                     const dateLabel = new Date(date + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
                     return (
-                    <th key={date} scope="col" className="px-4 py-2 text-center align-top">
+                    <th key={date} scope="col" className="px-2 py-2 text-center align-top min-w-[80px]">
                             <div className="flex flex-col items-center justify-start gap-2 h-full">
                                 <span>{dateLabel}</span>
                                 <input
@@ -189,23 +293,19 @@ const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, c
                     {classDates.map(date => {
                         const currentStatus = getStatusForStudent(student.id, date);
                         const session = classSessions.find(s => s.date === date);
-                        const isTaught = session ? session.taught : false; // Por defecto, la clase no está dictada
+                        const isTaught = session ? session.taught : false;
                         return (
-                        <td key={date} className="px-4 py-2 text-center">
+                        <td key={date} className="px-2 py-2 text-center">
                             <div className="flex justify-center space-x-1">
-                            {(['P', 'A', 'J'] as AttendanceStatus[]).map(status => (
-                                <button
-                                    key={status}
-                                    onClick={() => onSetAttendance(student.id, date, status)}
-                                    disabled={!isTaught}
-                                    className={`w-7 h-7 font-bold rounded-full transition-all duration-200 text-xs
-                                        ${currentStatus === status && isTaught ? statusColors[status] + ' opacity-100' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-300'}
-                                        ${!isTaught ? 'opacity-30 cursor-not-allowed' : `hover:${statusColors[status].split(' ')[1]} opacity-60 hover:opacity-100`}
-                                    `}
-                                    >
-                                {status}
-                                </button>
-                            ))}
+                                {(['P', 'A', 'J'] as AttendanceStatus[]).map(status => (
+                                     <AttendanceButton
+                                        key={status}
+                                        currentStatus={currentStatus}
+                                        status={status}
+                                        onClick={() => onSetAttendance(student.id, date, status)}
+                                        disabled={!isTaught}
+                                    />
+                                ))}
                             </div>
                         </td>
                         );
