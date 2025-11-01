@@ -1,0 +1,5 @@
+{
+  "name": "App de Control Docente",
+  "description": "Una aplicación para gestionar cursos, asistencias y calificaciones de estudiantes.",
+  "requestFramePermissions": []
+}
