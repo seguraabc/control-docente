@@ -111,7 +111,8 @@ const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, c
             a.status === 'P' &&
             taughtClassDates.includes(a.date)
         ).length;
-        const percentage = taughtClassesCount > 0 ? Math.round((presentCount / taughtClassDates) * 100) : 100;
+        // FIX: Replaced `taughtClassDates` with `taughtClassesCount` to correct the percentage calculation.
+        const percentage = taughtClassesCount > 0 ? Math.round((presentCount / taughtClassesCount) * 100) : 100;
 
         return [studentName, ...attendanceStatuses, `${percentage}%`];
     });

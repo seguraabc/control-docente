@@ -60,7 +60,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, onEdit, onArchive, onSe
                   onClick={(e) => { e.stopPropagation(); onEdit(course); setMenuOpen(false); }}
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center rounded-t-md"
                 >
-                  <PencilIcon /> Editar
+                  <PencilIcon className="h-5 w-5 mr-2" /> Editar
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); onArchive(course.id); setMenuOpen(false); }}

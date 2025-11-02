@@ -209,6 +209,19 @@ const App: React.FC = () => {
       });
   }, [selectedCourseId]);
 
+  const handleDeleteEvaluationInstance = useCallback((instanceId: string) => {
+    if (!selectedCourseId) return;
+    setEvaluationInstances(prev => prev.filter(inst => inst.id !== instanceId));
+    setGrades(prev => prev.filter(g => g.evaluationInstanceId !== instanceId));
+  }, [selectedCourseId]);
+
+  const handleEditEvaluationInstanceName = useCallback((instanceId: string, newName: string) => {
+    if (!selectedCourseId) return;
+    setEvaluationInstances(prev => prev.map(inst => 
+      inst.id === instanceId ? { ...inst, name: newName } : inst
+    ));
+  }, [selectedCourseId]);
+
   const handleSetGrade = useCallback((studentId: string, evaluationInstanceId: string, value: string) => {
       setGrades(prev => {
           const gradeIndex = prev.findIndex(g => g.studentId === studentId && g.evaluationInstanceId === evaluationInstanceId);
@@ -295,6 +308,8 @@ const App: React.FC = () => {
             onAddEvaluationInstance={handleAddEvaluationInstance}
             onUpdateEvaluationOrder={handleUpdateEvaluationOrder}
             onSetGrade={handleSetGrade}
+            onDeleteEvaluationInstance={handleDeleteEvaluationInstance}
+            onEditEvaluationInstanceName={handleEditEvaluationInstanceName}
           />
         )}
       </main>

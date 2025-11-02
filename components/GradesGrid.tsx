@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { Student, EvaluationInstance, Grade } from '../types';
-import { PlusIcon } from './icons';
+import { PlusIcon, PencilIcon, TrashIcon } from './icons';
 
 interface GradesGridProps {
   students: Student[];
@@ -9,11 +9,14 @@ interface GradesGridProps {
   onAddEvaluationInstance: (name: string) => void;
   onUpdateEvaluationOrder: (updatedInstances: EvaluationInstance[]) => void;
   onSetGrade: (studentId: string, evaluationInstanceId: string, value: string) => void;
+  onDeleteEvaluationInstance: (instanceId: string) => void;
+  onEditEvaluationInstanceName: (instanceId: string, newName: string) => void;
 }
 
 const GradesGrid: React.FC<GradesGridProps> = ({ 
     students, evaluationInstances, grades,
-    onAddEvaluationInstance, onUpdateEvaluationOrder, onSetGrade
+    onAddEvaluationInstance, onUpdateEvaluationOrder, onSetGrade,
+    onDeleteEvaluationInstance, onEditEvaluationInstanceName
 }) => {
 
   const sortedInstances = useMemo(() => 
@@ -33,20 +36,25 @@ const GradesGrid: React.FC<GradesGridProps> = ({
   };
   
   const handleGradeChange = (studentId: string, instanceId: string, value: string) => {
-    const upperValue = value.toUpperCase();
-    if (upperValue === '' || upperValue === 'A') {
-      onSetGrade(studentId, instanceId, upperValue);
-      return;
-    }
-    const numValue = parseInt(upperValue, 10);
-    if (!isNaN(numValue) && numValue >= 1 && numValue <= 10) {
-      onSetGrade(studentId, instanceId, String(numValue));
-    }
+    onSetGrade(studentId, instanceId, value);
   };
   
   const getGradeForStudent = (studentId: string, instanceId: string) => {
     return grades.find(g => g.studentId === studentId && g.evaluationInstanceId === instanceId)?.value || '';
   };
+
+    const handleEditInstance = (instance: EvaluationInstance) => {
+        const newName = prompt('Editar nombre de la instancia de evaluación:', instance.name);
+        if (newName && newName.trim() && newName.trim() !== instance.name) {
+            onEditEvaluationInstanceName(instance.id, newName.trim());
+        }
+    };
+
+    const handleDeleteInstance = (instanceId: string) => {
+        if (window.confirm('¿Estás seguro de que deseas eliminar esta instancia? Todas las calificaciones asociadas se perderán permanentemente.')) {
+            onDeleteEvaluationInstance(instanceId);
+        }
+    };
 
   // Drag and Drop handlers
   const handleDragStart = (instance: EvaluationInstance) => {
@@ -109,14 +117,32 @@ const GradesGrid: React.FC<GradesGridProps> = ({
                 <th 
                   key={instance.id} 
                   scope="col" 
-                  className="px-4 py-3 text-center cursor-move"
+                  className="px-2 py-3 text-center cursor-move group"
                   draggable
                   onDragStart={() => handleDragStart(instance)}
                   onDragEnter={() => handleDragEnter(instance)}
                   onDragEnd={handleDragEnd}
                   onDragOver={(e) => e.preventDefault()}
                 >
-                  {instance.name}
+                    <div className="flex items-center justify-center gap-1">
+                        <span>{instance.name}</span>
+                        <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); handleEditInstance(instance); }} 
+                                className="p-1 text-gray-500 hover:text-indigo-500 rounded-full"
+                                title="Editar nombre"
+                            >
+                                <PencilIcon className="h-4 w-4" />
+                            </button>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); handleDeleteInstance(instance.id); }} 
+                                className="p-1 text-gray-500 hover:text-red-500 rounded-full"
+                                title="Eliminar instancia"
+                            >
+                                <TrashIcon className="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
                 </th>
               ))}
             </tr>
@@ -133,8 +159,7 @@ const GradesGrid: React.FC<GradesGridProps> = ({
                       type="text"
                       value={getGradeForStudent(student.id, instance.id)}
                       onChange={(e) => handleGradeChange(student.id, instance.id, e.target.value)}
-                      className="w-16 h-8 text-center bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      maxLength={2}
+                      className="w-20 h-8 text-center bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </td>
                 ))}

@@ -21,6 +21,8 @@ interface CourseDetailProps {
   onAddEvaluationInstance: (name: string) => void;
   onUpdateEvaluationOrder: (updatedInstances: EvaluationInstance[]) => void;
   onSetGrade: (studentId: string, evaluationInstanceId: string, value: string) => void;
+  onDeleteEvaluationInstance: (instanceId: string) => void;
+  onEditEvaluationInstanceName: (instanceId: string, newName: string) => void;
 }
 
 type ActiveTab = 'students' | 'attendance' | 'grades';
@@ -106,6 +108,8 @@ const CourseDetail: React.FC<CourseDetailProps> = (props) => {
             onAddEvaluationInstance={props.onAddEvaluationInstance}
             onUpdateEvaluationOrder={props.onUpdateEvaluationOrder}
             onSetGrade={props.onSetGrade}
+            onDeleteEvaluationInstance={props.onDeleteEvaluationInstance}
+            onEditEvaluationInstanceName={props.onEditEvaluationInstanceName}
           />
         )}
       </div>
