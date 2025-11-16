@@ -16,7 +16,7 @@ declare const process: {
 // para que Vite las exponga al cliente.
 // Ejemplo de archivo .env:
 // VITE_GOOGLE_API_KEY="AIzaSyAjTKl_pqZ5HuZMPAnh90e2txuUW3sN0oc"
-// VITE_GOOGLE_CLIENT_ID=" 191525381309-c8vaer2ngqv6u01pfqtfgisf8oogpo90.apps.googleusercontent.com "
+// VITE_GOOGLE_CLIENT_ID="191525381309-c8vaer2ngqv6u01pfqtfgisf8oogpo90.apps.googleusercontent.com"
 
 export const GOOGLE_CONFIG = {
   API_KEY: process.env.VITE_GOOGLE_API_KEY,
