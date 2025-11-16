@@ -90,6 +90,38 @@ const App: React.FC = () => {
     initialize();
   }, []);
 
+  // Handle URL hash for navigation and deep linking
+  useEffect(() => {
+    // Only run this logic if the user data is loaded
+    if (!appData) return;
+
+    const handleNavigation = () => {
+      const hash = window.location.hash;
+      if (hash.startsWith('#/course/')) {
+        const courseId = hash.substring('#/course/'.length);
+        if (appData.courses.some(c => c.id === courseId)) {
+          setSelectedCourseId(courseId);
+        } else {
+          // If course ID from URL is invalid, go to dashboard and clean up the URL.
+          setSelectedCourseId(null);
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+      } else {
+        setSelectedCourseId(null);
+      }
+    };
+    
+    // Check the URL on initial load or when data becomes available
+    handleNavigation();
+
+    // Listen for back/forward button presses
+    window.addEventListener('popstate', handleNavigation);
+
+    return () => {
+      window.removeEventListener('popstate', handleNavigation);
+    };
+  }, [appData]); // Dependency on appData ensures this runs once data is loaded.
+
   const loadData = async () => {
     setIsLoading(true);
     try {
@@ -122,8 +154,16 @@ const App: React.FC = () => {
       setSelectedCourseId(null);
   };
   
-  const handleSelectCourse = useCallback((courseId: string) => setSelectedCourseId(courseId), []);
-  const handleBackToDashboard = useCallback(() => setSelectedCourseId(null), []);
+  const handleSelectCourse = useCallback((courseId: string) => {
+    setSelectedCourseId(courseId);
+    window.history.pushState({ courseId }, ``, `#/course/${courseId}`);
+  }, []);
+
+  const handleBackToDashboard = useCallback(() => {
+    setSelectedCourseId(null);
+    window.history.replaceState(null, ``, window.location.pathname + window.location.search);
+  }, []);
+  
   const handleOpenCreateModal = useCallback(() => { setEditingCourse(null); setIsModalOpen(true); }, []);
   const handleOpenEditModal = useCallback((course: Course) => { setEditingCourse(course); setIsModalOpen(true); }, []);
   const handleCloseModal = useCallback(() => { setIsModalOpen(false); setEditingCourse(null); }, []);
