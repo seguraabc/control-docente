@@ -89,38 +89,28 @@ const App: React.FC = () => {
     };
     initialize();
   }, []);
-
-  // Handle URL hash for navigation and deep linking
+  
+  // Maneja la navegación hacia atrás/adelante del navegador
   useEffect(() => {
-    // Only run this logic if the user data is loaded
-    if (!appData) return;
-
-    const handleNavigation = () => {
-      const hash = window.location.hash;
-      if (hash.startsWith('#/course/')) {
-        const courseId = hash.substring('#/course/'.length);
-        if (appData.courses.some(c => c.id === courseId)) {
-          setSelectedCourseId(courseId);
-        } else {
-          // If course ID from URL is invalid, go to dashboard and clean up the URL.
-          setSelectedCourseId(null);
-          window.history.replaceState(null, '', window.location.pathname + window.location.search);
-        }
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state?.page === 'course-detail' && event.state?.courseId) {
+        setSelectedCourseId(event.state.courseId);
       } else {
         setSelectedCourseId(null);
       }
     };
-    
-    // Check the URL on initial load or when data becomes available
-    handleNavigation();
 
-    // Listen for back/forward button presses
-    window.addEventListener('popstate', handleNavigation);
+    window.addEventListener('popstate', handlePopState);
+    
+    // Maneja casos donde el usuario recarga la página en la vista de detalle
+    if (window.history.state?.page === 'course-detail' && window.history.state?.courseId) {
+      setSelectedCourseId(window.history.state.courseId);
+    }
 
     return () => {
-      window.removeEventListener('popstate', handleNavigation);
+      window.removeEventListener('popstate', handlePopState);
     };
-  }, [appData]); // Dependency on appData ensures this runs once data is loaded.
+  }, []);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -155,15 +145,12 @@ const App: React.FC = () => {
   };
   
   const handleSelectCourse = useCallback((courseId: string) => {
+    history.pushState({ page: 'course-detail', courseId }, '', window.location.href);
     setSelectedCourseId(courseId);
-    window.history.pushState({ courseId }, ``, `#/course/${courseId}`);
   }, []);
-
   const handleBackToDashboard = useCallback(() => {
-    setSelectedCourseId(null);
-    window.history.replaceState(null, ``, window.location.pathname + window.location.search);
+    history.back();
   }, []);
-  
   const handleOpenCreateModal = useCallback(() => { setEditingCourse(null); setIsModalOpen(true); }, []);
   const handleOpenEditModal = useCallback((course: Course) => { setEditingCourse(course); setIsModalOpen(true); }, []);
   const handleCloseModal = useCallback(() => { setIsModalOpen(false); setEditingCourse(null); }, []);
