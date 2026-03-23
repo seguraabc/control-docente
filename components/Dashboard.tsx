@@ -1,7 +1,7 @@
 import React from 'react';
 import { Course } from '../types';
 import CourseCard from './CourseCard';
-import { PlusIcon, CogIcon } from './icons';
+import { PlusIcon, CalendarIcon } from './icons';
 
 interface DashboardProps {
   courses: Course[];
@@ -23,11 +23,11 @@ const Dashboard: React.FC<DashboardProps> = ({ courses, onAddCourse, onEditCours
             <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Mis Cursos</h1>
              <button
                 onClick={onOpenSemesterModal}
-                className="flex items-center justify-center p-2 bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-semibold rounded-lg shadow-md hover:bg-gray-300 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-50 dark:focus:ring-offset-gray-950 focus:ring-indigo-500"
-                title="Configurar Semestres"
-                aria-label="Configurar fechas de los semestres"
+                className="flex items-center justify-center p-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-semibold rounded-lg shadow-sm border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-800/50 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-50 dark:focus:ring-offset-gray-950 focus:ring-indigo-500"
+                title="Configurar Fechas de Cuatrimestres"
+                aria-label="Abrir calendario de cuatrimestres"
             >
-                <CogIcon className="h-5 w-5" />
+                <CalendarIcon className="h-5 w-5" />
             </button>
         </div>
         <button
@@ -51,9 +51,9 @@ const Dashboard: React.FC<DashboardProps> = ({ courses, onAddCourse, onEditCours
             />
           ))
         ) : (
-          <div className="col-span-1 md:col-span-2 lg:col-span-3 text-center py-12 bg-gray-100 dark:bg-gray-900 rounded-lg">
+          <div className="col-span-1 md:col-span-2 lg:col-span-3 text-center py-12 bg-gray-100 dark:bg-gray-900 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
             <h3 className="text-xl text-gray-600 dark:text-gray-400">No tienes cursos activos.</h3>
-            <p className="text-gray-500 dark:text-gray-500 mt-2">¡Crea tu primer curso para empezar!</p>
+            <p className="text-gray-500 dark:text-gray-500 mt-2">¡Crea tu primer curso para empezar a controlar la asistencia!</p>
           </div>
         )}
       </div>
