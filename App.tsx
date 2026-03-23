@@ -13,7 +13,6 @@ import { FullLogo } from './components/Logo';
 
 type Theme = 'light' | 'dark';
 
-// Custom Hook para ejecutar un efecto con debounce
 const useDebouncedEffect = (effect: () => void, deps: React.DependencyList, delay: number) => {
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -24,7 +23,6 @@ const useDebouncedEffect = (effect: () => void, deps: React.DependencyList, dela
 };
 
 const App: React.FC = () => {
-  // Verificación de configuración a través de variables de entorno
   if (!GOOGLE_CONFIG.API_KEY || !GOOGLE_CONFIG.CLIENT_ID) {
     return <ConfigurationNeededScreen />;
   }
@@ -46,8 +44,12 @@ const App: React.FC = () => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-
-  const [user, setUser] = useState<User | null>(null);
+  // Manejo de usuario con persistencia en localStorage
+  const [user, setUser] = useState<User | null>(() => {
+    const savedUser = localStorage.getItem('google_auth_user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  
   const [appData, setAppData] = useState<AppData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -73,24 +75,26 @@ const App: React.FC = () => {
         await initGoogleClient((authUser) => {
           if (authUser) {
             setUser(authUser);
+            localStorage.setItem('google_auth_user', JSON.stringify(authUser));
             loadData();
           } else {
-            setUser(null);
-            setAppData(null);
             setIsLoading(false);
           }
         });
         setIsGoogleClientReady(true);
+
+        if (localStorage.getItem('google_auth_user')) {
+            loadData();
+        }
       } catch (error: any) {
         console.error("Error al inicializar cliente de Google:", error);
-        setInitializationError("No se pudo conectar con los servicios de Google. Por favor, verifica la configuración de la consola y las credenciales (API Key, Client ID).");
+        setInitializationError("No se pudo conectar con los servicios de Google. Por favor, verifica la configuración de la consola y las credenciales.");
         setIsLoading(false);
       }
     };
     initialize();
   }, []);
   
-  // Maneja la navegación hacia atrás/adelante del navegador
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
       if (event.state?.page === 'course-detail' && event.state?.courseId) {
@@ -102,7 +106,6 @@ const App: React.FC = () => {
 
     window.addEventListener('popstate', handlePopState);
     
-    // Maneja casos donde el usuario recarga la página en la vista de detalle
     if (window.history.state?.page === 'course-detail' && window.history.state?.courseId) {
       setSelectedCourseId(window.history.state.courseId);
     }
@@ -119,7 +122,6 @@ const App: React.FC = () => {
       setAppData(data);
     } catch (error) {
       console.error("Error al cargar los datos de la hoja de cálculo", error);
-      // Opcional: mostrar un mensaje de error al usuario
     } finally {
       setIsLoading(false);
     }
@@ -129,7 +131,7 @@ const App: React.FC = () => {
     if (appData) {
       setIsSaving(true);
       saveSpreadsheetData(appData).then(() => {
-        setTimeout(() => setIsSaving(false), 1000); // Mantiene el indicador visible un poco más
+        setTimeout(() => setIsSaving(false), 1000);
       });
     }
   }, [appData]);
@@ -137,11 +139,13 @@ const App: React.FC = () => {
   useDebouncedEffect(debouncedSave, [appData], 1500);
 
   const handleLogin = () => handleSignIn();
+  
   const handleLogout = () => {
       handleSignOut();
       setUser(null);
       setAppData(null);
       setSelectedCourseId(null);
+      localStorage.removeItem('google_auth_user');
   };
   
   const handleSelectCourse = useCallback((courseId: string) => {
@@ -268,7 +272,7 @@ const App: React.FC = () => {
     [selectedCourseId, appData]
   );
 
-  if (isLoading) {
+  if (isLoading && !user) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col items-center justify-center text-center p-4">
         <FullLogo className="w-auto h-32 mb-4" />
@@ -300,14 +304,14 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-200 font-sans">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-200 font-sans">
       <Header user={user} onLogout={handleLogout} theme={theme} setTheme={setTheme} />
        {isSaving && (
         <div className="fixed bottom-4 right-4 bg-green-600/90 text-white text-sm px-4 py-2 rounded-lg shadow-lg z-50 animate-pulse">
             Guardando...
         </div>
       )}
-      <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+      <main className="flex-grow p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto">
         {!selectedCourse ? (
            <Dashboard
             courses={appData.courses}
@@ -340,6 +344,11 @@ const App: React.FC = () => {
           />
         )}
       </main>
+
+      <footer className="py-6 text-center text-sm font-medium text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-950/50 backdrop-blur-sm">
+        Desarrollado por S. Segura - 2026
+      </footer>
+
       {isModalOpen && (
         <CourseModal course={editingCourse} onClose={handleCloseModal} onSave={handleSaveCourse} />
       )}
