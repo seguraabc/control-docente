@@ -8,6 +8,7 @@ export interface Course {
   id: string;
   name: string;
   schedule: string;
+  scheduleDays?: number[]; // ARRAY CLAVE: [1, 3] significa Lunes y Miércoles
   status: 'activo' | 'archivado';
 }
 
@@ -55,7 +56,6 @@ export interface SemesterDates {
     secondSemester: Semester;
 }
 
-// Nuevo tipo para agrupar todos los datos de la aplicación
 export interface AppData {
   courses: Course[];
   students: Student[];
