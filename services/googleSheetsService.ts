@@ -1,5 +1,4 @@
 // FIX: Add declarations for gapi and google to resolve 'Cannot find name/namespace' errors.
-// These are loaded from external scripts and are available in the global scope.
 declare const gapi: any;
 declare const google: any;
 
@@ -15,46 +14,64 @@ const SPREADSHEET_NAME = 'ControlDocente_Datos';
 
 let tokenClient: any;
 let spreadsheetId: string | null = null;
+let globalAuthChangeCallback: ((user: User | null) => void) | null = null;
+
+// Controladores de promesas para pausar/reanudar la ejecución de la API
+let tokenResolvePromise: ((value: void) => void) | null = null;
+let tokenRejectPromise: ((reason?: any) => void) | null = null;
 
 const DATA_SHEETS = ['courses', 'students', 'attendance', 'classSessions', 'evaluationInstances', 'grades', 'semesterDates'];
 
 /**
  * Initializes the Google API and Identity Services clients.
- * This function polls until the necessary scripts (loaded from index.html) are ready.
  */
 export function initGoogleClient(onAuthChange: (user: User | null) => void): Promise<void> {
+    globalAuthChangeCallback = onAuthChange;
+
     return new Promise((resolve, reject) => {
         const interval = setInterval(() => {
             if (typeof gapi !== 'undefined' && typeof google?.accounts !== 'undefined') {
                 clearInterval(interval);
 
                 try {
-                    // Initialize GIS client
+                    // Inicializar cliente de Google Identity Services
                     tokenClient = google.accounts.oauth2.initTokenClient({
                         client_id: CLIENT_ID,
                         scope: SCOPES,
                         callback: (tokenResponse: any) => {
-                            // A successful response contains an access_token.
-                            // A failed response might have an 'error' property (e.g., 'interaction_required'
-                            // during silent sign-in) or it might be a malformed response from a popup
-                            // that was closed or blocked by the browser.
                             if (tokenResponse && tokenResponse.access_token) {
-                                // IMPORTANT: The token from GIS must be passed to the GAPI client.
-                                gapi.client.setToken(tokenResponse);
-                                updateLoginState(onAuthChange);
-                            } else {
-                                // This handles both explicit errors and cases where the token is missing.
-                                const errorMessage = tokenResponse?.error || 'No access token in response';
-                                console.log(`Auth token error: ${errorMessage}`);
+                                const expiresInStr = tokenResponse.expires_in?.toString() || "3599";
+                                const expiryTime = new Date().getTime() + (parseInt(expiresInStr, 10) * 1000);
                                 
-                                // Explicitly clear the token from GAPI to ensure a clean state.
-                                gapi.client.setToken(null);
-                                onAuthChange(null); // Ensure user is in logged-out state
+                                localStorage.setItem('gapi_access_token', JSON.stringify(tokenResponse));
+                                localStorage.setItem('gapi_token_expiry', expiryTime.toString());
+
+                                gapi.client.setToken(tokenResponse);
+                                
+                                // Si había una operación pausada esperando el token, reanudarla
+                                if (tokenResolvePromise) {
+                                    tokenResolvePromise();
+                                    tokenResolvePromise = null;
+                                    tokenRejectPromise = null;
+                                } else {
+                                    // Flujo de login normal
+                                    updateLoginState(onAuthChange);
+                                }
+                            } else {
+                                // El usuario cerró el popup o falló la autenticación
+                                if (tokenRejectPromise) {
+                                    tokenRejectPromise(new Error('Renovación de token cancelada por el usuario.'));
+                                    tokenResolvePromise = null;
+                                    tokenRejectPromise = null;
+                                } else {
+                                    gapi.client.setToken(null);
+                                    onAuthChange(null);
+                                }
                             }
                         },
                     });
 
-                    // Initialize GAPI client
+                    // Inicializar cliente GAPI
                     gapi.load('client', async () => {
                         try {
                             await gapi.client.init({
@@ -62,12 +79,25 @@ export function initGoogleClient(onAuthChange: (user: User | null) => void): Pro
                                 discoveryDocs: DISCOVERY_DOCS,
                             });
                             
-                            // On page load, attempt a silent sign-in.
-                            // If the user is already signed in and has granted permissions,
-                            // this will succeed and the callback will be triggered with a new token.
-                            // If not, it will fail silently and the callback will handle the error.
-                            tokenClient.requestAccessToken({ prompt: 'none' });
+                            const savedTokenStr = localStorage.getItem('gapi_access_token');
+                            const expiryStr = localStorage.getItem('gapi_token_expiry');
 
+                            if (savedTokenStr && expiryStr) {
+                                const expiryTime = parseInt(expiryStr, 10);
+                                // Verificar si el token guardado aún tiene vida útil
+                                if (new Date().getTime() < expiryTime) {
+                                    const savedToken = JSON.parse(savedTokenStr);
+                                    gapi.client.setToken(savedToken);
+                                    updateLoginState(onAuthChange);
+                                    resolve();
+                                    return;
+                                } else {
+                                    localStorage.removeItem('gapi_access_token');
+                                    localStorage.removeItem('gapi_token_expiry');
+                                }
+                            }
+
+                            onAuthChange(null);
                             resolve();
                         } catch (e) {
                             reject(e);
@@ -80,7 +110,6 @@ export function initGoogleClient(onAuthChange: (user: User | null) => void): Pro
         }, 100);
     });
 }
-
 
 /**
  * Actualiza el estado de login y obtiene el perfil del usuario.
@@ -111,9 +140,6 @@ async function updateLoginState(onAuthChange: (user: User | null) => void) {
 }
 
 export function handleSignIn() {
-    // This will trigger the interactive login flow. The prompt is omitted,
-    // which defaults to showing the account chooser and then consent if needed.
-    // This is the correct behavior for a user-initiated login.
     tokenClient.requestAccessToken({ prompt: '' });
 }
 
@@ -123,6 +149,33 @@ export function handleSignOut() {
         google.accounts.oauth2.revoke(token.access_token, () => {
             gapi.client.setToken(null);
             spreadsheetId = null;
+            localStorage.removeItem('gapi_access_token');
+            localStorage.removeItem('gapi_token_expiry');
+            if (globalAuthChangeCallback) globalAuthChangeCallback(null);
+        });
+    } else {
+        localStorage.removeItem('gapi_access_token');
+        localStorage.removeItem('gapi_token_expiry');
+        if (globalAuthChangeCallback) globalAuthChangeCallback(null);
+    }
+}
+
+/**
+ * Validador principal. Se ejecuta antes de cada llamada a la API.
+ * Si el token expira en menos de 5 minutos, pausa la ejecución y solicita uno nuevo.
+ */
+async function ensureValidToken(): Promise<void> {
+    const expiryStr = localStorage.getItem('gapi_token_expiry');
+    const currentTime = new Date().getTime();
+    
+    // Margen de seguridad: 300000 ms = 5 minutos
+    if (!expiryStr || currentTime > (parseInt(expiryStr, 10) - 300000)) {
+        console.log("Token expirado o a punto de expirar. Solicitando renovación...");
+        return new Promise((resolve, reject) => {
+            tokenResolvePromise = resolve;
+            tokenRejectPromise = reject;
+            // Levanta el popup de Google para renovar la sesión interactiva
+            tokenClient.requestAccessToken({ prompt: '' });
         });
     }
 }
@@ -133,8 +186,9 @@ export function handleSignOut() {
 async function findOrCreateSpreadsheet(): Promise<string> {
     if (spreadsheetId) return spreadsheetId;
 
+    await ensureValidToken(); // Verificar token antes de actuar
+
     try {
-        // 1. Buscar el archivo
         const response = await gapi.client.drive.files.list({
             q: `name='${SPREADSHEET_NAME}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`,
             fields: 'files(id, name)'
@@ -145,11 +199,8 @@ async function findOrCreateSpreadsheet(): Promise<string> {
             return spreadsheetId;
         }
 
-        // 2. Si no se encuentra, crearlo
         const spreadsheet = await gapi.client.sheets.spreadsheets.create({
-            properties: {
-                title: SPREADSHEET_NAME
-            },
+            properties: { title: SPREADSHEET_NAME },
             sheets: DATA_SHEETS.map(title => ({ properties: { title } }))
         });
 
@@ -166,6 +217,7 @@ async function findOrCreateSpreadsheet(): Promise<string> {
  */
 export async function getSpreadsheetData(): Promise<AppData> {
     try {
+        await ensureValidToken(); // Verificar token antes de leer
         const ssId = await findOrCreateSpreadsheet();
         
         const ranges = DATA_SHEETS.map(sheet => `${sheet}!A1`);
@@ -175,11 +227,9 @@ export async function getSpreadsheetData(): Promise<AppData> {
         });
 
         const data: Partial<AppData> = {};
-        response.result.valueRanges?.forEach((valueRange, index) => {
+        response.result.valueRanges?.forEach((valueRange: any, index: number) => {
             const sheetName = DATA_SHEETS[index] as keyof AppData;
             const cellValue = valueRange.values?.[0]?.[0];
-            // FIX: Cast `data` to `any` to allow dynamic property assignment
-            // to prevent TypeScript from throwing errors on indexed access on a union type.
             try {
                 (data as any)[sheetName] = cellValue ? JSON.parse(cellValue) : (sheetName === 'semesterDates' ? null : []);
             } catch (e) {
@@ -187,7 +237,6 @@ export async function getSpreadsheetData(): Promise<AppData> {
             }
         });
         
-        // Estado inicial por defecto si el archivo es nuevo
         return {
             courses: data.courses || [],
             students: data.students || [],
@@ -212,6 +261,7 @@ export async function getSpreadsheetData(): Promise<AppData> {
  */
 export async function saveSpreadsheetData(data: AppData) {
     try {
+        await ensureValidToken(); // Verificar token antes de escribir
         const ssId = await findOrCreateSpreadsheet();
         
         const dataForUpdate = DATA_SHEETS.map(sheetName => {
