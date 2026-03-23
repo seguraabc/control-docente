@@ -1,45 +1,49 @@
 import React, { useMemo } from 'react';
-import { Student, AttendanceRecord, AttendanceStatus, ClassSession, SemesterDates } from '../types';
+import { Student, AttendanceRecord, AttendanceStatus, ClassSession, SemesterDates, Course } from '../types';
 import { DownloadIcon } from './icons';
 
 interface AttendanceGridProps {
   students: Student[];
   attendance: AttendanceRecord[];
   classSessions: ClassSession[];
-  courseName: string;
-  courseSchedule: string;
+  course: Course;
   semesterDates: SemesterDates | null;
   onSetAttendance: (studentId: string, date: string, status: AttendanceStatus) => void;
   onToggleClassSession: (date: string) => void;
 }
 
-const DAY_MAP: { [key: string]: number } = {
-  domingo: 0, lunes: 1, martes: 2, miércoles: 3, jueves: 4, viernes: 5, sábado: 6
-};
-
-// Helper para generar las fechas de clase basadas en el horario y los cuatrimestres
-const generateClassDates = (schedule: string, semesterDates: SemesterDates | null): string[] => {
+const generateClassDates = (course: Course, semesterDates: SemesterDates | null): string[] => {
     if (!semesterDates) return [];
     
-    const scheduleDays = Object.keys(DAY_MAP).filter(day => 
-        new RegExp(day, 'i').test(schedule)
-    ).map(day => DAY_MAP[day]);
+    let activeDays: number[] = [];
+    if (course.scheduleDays && course.scheduleDays.length > 0) {
+        activeDays = course.scheduleDays;
+    } else {
+        const DAY_MAP: { [key: string]: number } = { domingo: 0, lunes: 1, martes: 2, miércoles: 3, miercoles: 3, jueves: 4, viernes: 5, sábado: 6, sabado: 6 };
+        activeDays = Object.keys(DAY_MAP).filter(day => 
+            new RegExp(`\\b${day}\\b`, 'i').test(course.schedule)
+        ).map(day => DAY_MAP[day]);
+    }
 
-    if (scheduleDays.length === 0) return [];
+    if (activeDays.length === 0) return [];
     
     const allDates: string[] = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
 
     const processSemester = (startDateStr: string, endDateStr: string) => {
         if (!startDateStr || !endDateStr) return;
         
-        let currentDate = new Date(startDateStr + 'T00:00:00');
-        const endDate = new Date(endDateStr + 'T00:00:00');
+        const [startYear, startMonth, startDay] = startDateStr.split('-');
+        let currentDate = new Date(Number(startYear), Number(startMonth) - 1, Number(startDay));
         
-        while (currentDate <= endDate && currentDate <= today) {
-            if (scheduleDays.includes(currentDate.getDay())) {
-                allDates.push(currentDate.toISOString().split('T')[0]);
+        const [endYear, endMonth, endDay] = endDateStr.split('-');
+        const endDate = new Date(Number(endYear), Number(endMonth) - 1, Number(endDay));
+        
+        while (currentDate <= endDate) {
+            if (activeDays.includes(currentDate.getDay())) {
+                const year = currentDate.getFullYear();
+                const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+                const day = String(currentDate.getDate()).padStart(2, '0');
+                allDates.push(`${year}-${month}-${day}`);
             }
             currentDate.setDate(currentDate.getDate() + 1);
         }
@@ -52,10 +56,10 @@ const generateClassDates = (schedule: string, semesterDates: SemesterDates | nul
 };
 
 const AttendanceButton: React.FC<{
-    currentStatus?: AttendanceStatus;
-    status: AttendanceStatus;
-    onClick: () => void;
-    disabled: boolean;
+  currentStatus?: AttendanceStatus;
+  status: AttendanceStatus;
+  onClick: () => void;
+  disabled: boolean;
 }> = ({ currentStatus, status, onClick, disabled }) => {
     const statusColors: { [key in AttendanceStatus]: string } = {
         P: 'bg-green-500 hover:bg-green-600 text-white',
@@ -76,9 +80,8 @@ const AttendanceButton: React.FC<{
     );
 };
 
-
-const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, classSessions, courseName, courseSchedule, semesterDates, onSetAttendance, onToggleClassSession }) => {
-  const classDates = useMemo(() => generateClassDates(courseSchedule, semesterDates), [courseSchedule, semesterDates]);
+const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, classSessions, course, semesterDates, onSetAttendance, onToggleClassSession }) => {
+  const classDates = useMemo(() => generateClassDates(course, semesterDates), [course, semesterDates]);
   
   if (!semesterDates || !semesterDates.firstSemester.startDate) {
     return (
@@ -95,7 +98,7 @@ const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, c
   
   const taughtClassDates = useMemo(() => classDates.filter(date => {
       const session = classSessions.find(s => s.date === date);
-      return session ? session.taught : false; // Por defecto, una clase no se considera dictada
+      return session ? session.taught : false; 
   }), [classDates, classSessions]);
 
   const handleExportCSV = () => {
@@ -111,7 +114,7 @@ const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, c
             a.status === 'P' &&
             taughtClassDates.includes(a.date)
         ).length;
-        // FIX: Replaced `taughtClassDates` with `taughtClassesCount` to correct the percentage calculation.
+        
         const percentage = taughtClassesCount > 0 ? Math.round((presentCount / taughtClassesCount) * 100) : 100;
 
         return [studentName, ...attendanceStatuses, `${percentage}%`];
@@ -129,7 +132,7 @@ const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, c
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
 
-    const safeCourseName = courseName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const safeCourseName = course.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
     const today = new Date().toISOString().split('T')[0];
     link.setAttribute("download", `asistencia_${safeCourseName}_${today}.csv`);
     
