@@ -93,8 +93,7 @@ const CourseDetail: React.FC<CourseDetailProps> = (props) => {
             students={props.students}
             attendance={props.attendance}
             classSessions={props.classSessions}
-            courseName={course.name}
-            courseSchedule={course.schedule}
+            course={course}
             semesterDates={props.semesterDates}
             onSetAttendance={props.onSetAttendance}
             onToggleClassSession={props.onToggleClassSession}
