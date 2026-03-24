@@ -12,6 +12,7 @@ import { GOOGLE_CONFIG } from './config';
 import { FullLogo } from './components/Logo';
 
 type Theme = 'light' | 'dark';
+type ColorTheme = 'blue' | 'green' | 'red' | 'yellow';
 
 const useDebouncedEffect = (effect: () => void, deps: React.DependencyList, delay: number) => {
   useEffect(() => {
@@ -26,12 +27,21 @@ const App: React.FC = () => {
   if (!GOOGLE_CONFIG.API_KEY || !GOOGLE_CONFIG.CLIENT_ID) {
     return <ConfigurationNeededScreen />;
   }
-  
+
   const [theme, setTheme] = useState<Theme>(() => {
     if (localStorage.getItem('theme')) {
-        return localStorage.getItem('theme') as Theme;
+      return localStorage.getItem('theme') as Theme;
     }
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+
+  const [colorTheme, setColorTheme] = useState<ColorTheme>(() => {
+    return (localStorage.getItem('colorTheme') as ColorTheme) || 'blue';
+  });
+
+  // NUEVO: Estado para el tamaño de fuente (en píxeles). Default 16px.
+  const [fontSize, setFontSize] = useState<number>(() => {
+    return Number(localStorage.getItem('fontSize')) || 16;
   });
 
   useEffect(() => {
@@ -44,18 +54,28 @@ const App: React.FC = () => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // Manejo de usuario con persistencia en localStorage
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', colorTheme);
+    localStorage.setItem('colorTheme', colorTheme);
+  }, [colorTheme]);
+
+  // NUEVO: Efecto para inyectar el tamaño en el documento
+  useEffect(() => {
+    document.documentElement.style.fontSize = `${fontSize}px`;
+    localStorage.setItem('fontSize', fontSize.toString());
+  }, [fontSize]);
+
   const [user, setUser] = useState<User | null>(() => {
     const savedUser = localStorage.getItem('google_auth_user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
-  
+
   const [appData, setAppData] = useState<AppData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isGoogleClientReady, setIsGoogleClientReady] = useState(false);
   const [initializationError, setInitializationError] = useState<string | null>(null);
-  
+
   const setCourses = (updater: React.SetStateAction<Course[]>) => setAppData(prev => prev ? { ...prev, courses: typeof updater === 'function' ? updater(prev.courses) : updater } : null);
   const setStudents = (updater: React.SetStateAction<Student[]>) => setAppData(prev => prev ? { ...prev, students: typeof updater === 'function' ? updater(prev.students) : updater } : null);
   const setAttendance = (updater: React.SetStateAction<AttendanceRecord[]>) => setAppData(prev => prev ? { ...prev, attendance: typeof updater === 'function' ? updater(prev.attendance) : updater } : null);
@@ -84,17 +104,17 @@ const App: React.FC = () => {
         setIsGoogleClientReady(true);
 
         if (localStorage.getItem('google_auth_user')) {
-            loadData();
+          loadData();
         }
       } catch (error: any) {
         console.error("Error al inicializar cliente de Google:", error);
-        setInitializationError("No se pudo conectar con los servicios de Google. Por favor, verifica la configuración de la consola y las credenciales.");
+        setInitializationError("No se pudo conectar con los servicios de Google.");
         setIsLoading(false);
       }
     };
     initialize();
   }, []);
-  
+
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
       if (event.state?.page === 'course-detail' && event.state?.courseId) {
@@ -105,7 +125,7 @@ const App: React.FC = () => {
     };
 
     window.addEventListener('popstate', handlePopState);
-    
+
     if (window.history.state?.page === 'course-detail' && window.history.state?.courseId) {
       setSelectedCourseId(window.history.state.courseId);
     }
@@ -135,19 +155,19 @@ const App: React.FC = () => {
       });
     }
   }, [appData]);
-  
+
   useDebouncedEffect(debouncedSave, [appData], 1500);
 
   const handleLogin = () => handleSignIn();
-  
+
   const handleLogout = () => {
-      handleSignOut();
-      setUser(null);
-      setAppData(null);
-      setSelectedCourseId(null);
-      localStorage.removeItem('google_auth_user');
+    handleSignOut();
+    setUser(null);
+    setAppData(null);
+    setSelectedCourseId(null);
+    localStorage.removeItem('google_auth_user');
   };
-  
+
   const handleSelectCourse = useCallback((courseId: string) => {
     history.pushState({ page: 'course-detail', courseId }, '', window.location.href);
     setSelectedCourseId(courseId);
@@ -175,7 +195,7 @@ const App: React.FC = () => {
   const handleArchiveCourse = useCallback((courseId: string) => {
     setCourses(prev => prev.map(c => c.id === courseId ? { ...c, status: c.status === 'activo' ? 'archivado' : 'activo' } : c));
   }, []);
-  
+
   const handleAddStudent = useCallback((studentData: Omit<Student, 'id' | 'courseId'>) => {
     if (!selectedCourseId) return;
     const newStudent: Student = { id: `s${Date.now()}`, courseId: selectedCourseId, ...studentData };
@@ -185,59 +205,59 @@ const App: React.FC = () => {
   const handleAddMultipleStudents = useCallback((studentsData: Omit<Student, 'id' | 'courseId'>[]) => {
     if (!selectedCourseId) return;
     const newStudents: Student[] = studentsData.map((studentData, index) => ({
-        id: `s${Date.now() + index}`,
-        courseId: selectedCourseId,
-        ...studentData
+      id: `s${Date.now() + index}`,
+      courseId: selectedCourseId,
+      ...studentData
     }));
     setStudents(prev => [...prev, ...newStudents]);
   }, [selectedCourseId]);
-  
+
   const handleDeleteStudent = useCallback((studentId: string) => {
     setStudents(prev => prev.filter(s => s.id !== studentId));
     setAttendance(prev => prev.filter(a => a.studentId !== studentId));
     setGrades(prev => prev.filter(g => g.studentId !== studentId));
   }, []);
-  
+
   const handleSetAttendance = useCallback((studentId: string, date: string, status: AttendanceStatus) => {
     setAttendance(prev => {
-        const recordIndex = prev.findIndex(a => a.studentId === studentId && a.date === date);
-        if (recordIndex > -1) {
-            const updatedRecord = { ...prev[recordIndex], status };
-            return [...prev.slice(0, recordIndex), updatedRecord, ...prev.slice(recordIndex + 1)];
-        } else {
-            return [...prev, { studentId, date, status }];
-        }
+      const recordIndex = prev.findIndex(a => a.studentId === studentId && a.date === date);
+      if (recordIndex > -1) {
+        const updatedRecord = { ...prev[recordIndex], status };
+        return [...prev.slice(0, recordIndex), updatedRecord, ...prev.slice(recordIndex + 1)];
+      } else {
+        return [...prev, { studentId, date, status }];
+      }
     });
   }, []);
-  
+
   const handleToggleClassSession = useCallback((date: string) => {
     if (!selectedCourseId) return;
     setClassSessions(prev => {
-        const sessionIndex = prev.findIndex(s => s.courseId === selectedCourseId && s.date === date);
-        if (sessionIndex > -1) {
-            const updatedSession = { ...prev[sessionIndex], taught: !prev[sessionIndex].taught };
-            return [...prev.slice(0, sessionIndex), updatedSession, ...prev.slice(sessionIndex + 1)];
-        } else {
-            return [...prev, { courseId: selectedCourseId, date, taught: true }];
-        }
+      const sessionIndex = prev.findIndex(s => s.courseId === selectedCourseId && s.date === date);
+      if (sessionIndex > -1) {
+        const updatedSession = { ...prev[sessionIndex], taught: !prev[sessionIndex].taught };
+        return [...prev.slice(0, sessionIndex), updatedSession, ...prev.slice(sessionIndex + 1)];
+      } else {
+        return [...prev, { courseId: selectedCourseId, date, taught: true }];
+      }
     });
   }, [selectedCourseId]);
-  
+
   const handleAddEvaluationInstance = useCallback((name: string) => {
-      if (!selectedCourseId) return;
-      setEvaluationInstances(prev => {
-          const courseInstances = prev.filter(inst => inst.courseId === selectedCourseId);
-          const newInstance: EvaluationInstance = { id: `ev${Date.now()}`, courseId: selectedCourseId, name, order: courseInstances.length };
-          return [...prev, newInstance];
-      });
+    if (!selectedCourseId) return;
+    setEvaluationInstances(prev => {
+      const courseInstances = prev.filter(inst => inst.courseId === selectedCourseId);
+      const newInstance: EvaluationInstance = { id: `ev${Date.now()}`, courseId: selectedCourseId, name, order: courseInstances.length };
+      return [...prev, newInstance];
+    });
   }, [selectedCourseId]);
 
   const handleUpdateEvaluationOrder = useCallback((updatedInstances: EvaluationInstance[]) => {
-      if (!selectedCourseId) return;
-      setEvaluationInstances(prev => {
-          const otherCourseInstances = prev.filter(inst => inst.courseId !== selectedCourseId);
-          return [...otherCourseInstances, ...updatedInstances];
-      });
+    if (!selectedCourseId) return;
+    setEvaluationInstances(prev => {
+      const otherCourseInstances = prev.filter(inst => inst.courseId !== selectedCourseId);
+      return [...otherCourseInstances, ...updatedInstances];
+    });
   }, [selectedCourseId]);
 
   const handleDeleteEvaluationInstance = useCallback((instanceId: string) => {
@@ -248,26 +268,26 @@ const App: React.FC = () => {
 
   const handleEditEvaluationInstanceName = useCallback((instanceId: string, newName: string) => {
     if (!selectedCourseId) return;
-    setEvaluationInstances(prev => prev.map(inst => 
+    setEvaluationInstances(prev => prev.map(inst =>
       inst.id === instanceId ? { ...inst, name: newName } : inst
     ));
   }, [selectedCourseId]);
 
   const handleSetGrade = useCallback((studentId: string, evaluationInstanceId: string, value: string) => {
-      setGrades(prev => {
-          const gradeIndex = prev.findIndex(g => g.studentId === studentId && g.evaluationInstanceId === evaluationInstanceId);
-          if (gradeIndex > -1) {
-              if (value === '') { return [...prev.slice(0, gradeIndex), ...prev.slice(gradeIndex + 1)]; }
-              const updatedGrade = { ...prev[gradeIndex], value };
-              return [...prev.slice(0, gradeIndex), updatedGrade, ...prev.slice(gradeIndex + 1)];
-          } else if (value !== '') {
-              return [...prev, { studentId, evaluationInstanceId, value }];
-          }
-          return prev;
-      });
+    setGrades(prev => {
+      const gradeIndex = prev.findIndex(g => g.studentId === studentId && g.evaluationInstanceId === evaluationInstanceId);
+      if (gradeIndex > -1) {
+        if (value === '') { return [...prev.slice(0, gradeIndex), ...prev.slice(gradeIndex + 1)]; }
+        const updatedGrade = { ...prev[gradeIndex], value };
+        return [...prev.slice(0, gradeIndex), updatedGrade, ...prev.slice(gradeIndex + 1)];
+      } else if (value !== '') {
+        return [...prev, { studentId, evaluationInstanceId, value }];
+      }
+      return prev;
+    });
   }, []);
 
-  const selectedCourse = useMemo(() => 
+  const selectedCourse = useMemo(() =>
     selectedCourseId && appData ? appData.courses.find(c => c.id === selectedCourseId) : null,
     [selectedCourseId, appData]
   );
@@ -294,26 +314,35 @@ const App: React.FC = () => {
   if (!user) {
     return <LoginScreen onLogin={handleLogin} isReady={isGoogleClientReady} />;
   }
-  
+
   if (!appData) {
-      return (
-         <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
-            <p className="text-gray-600 dark:text-gray-400">Cargando datos del usuario...</p>
-         </div>
-      );
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+        <p className="text-gray-600 dark:text-gray-400">Cargando datos del usuario...</p>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-200 font-sans">
-      <Header user={user} onLogout={handleLogout} theme={theme} setTheme={setTheme} />
-       {isSaving && (
+      <Header
+        user={user}
+        onLogout={handleLogout}
+        theme={theme}
+        setTheme={setTheme}
+        colorTheme={colorTheme}
+        setColorTheme={setColorTheme}
+        fontSize={fontSize}
+        setFontSize={setFontSize}
+      />
+      {isSaving && (
         <div className="fixed bottom-4 right-4 bg-green-600/90 text-white text-sm px-4 py-2 rounded-lg shadow-lg z-50 animate-pulse">
-            Guardando...
+          Guardando...
         </div>
       )}
       <main className="flex-grow p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto">
         {!selectedCourse ? (
-           <Dashboard
+          <Dashboard
             courses={appData.courses}
             onAddCourse={handleOpenCreateModal}
             onEditCourse={handleOpenEditModal}
@@ -322,7 +351,7 @@ const App: React.FC = () => {
             onOpenSemesterModal={handleOpenSemesterModal}
           />
         ) : (
-          <CourseDetail 
+          <CourseDetail
             course={selectedCourse}
             students={appData.students.filter(s => s.courseId === selectedCourse.id)}
             attendance={appData.attendance}

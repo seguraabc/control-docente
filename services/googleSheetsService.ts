@@ -34,7 +34,6 @@ export function initGoogleClient(onAuthChange: (user: User | null) => void): Pro
                 clearInterval(interval);
 
                 try {
-                    // Inicializar cliente de Google Identity Services
                     tokenClient = google.accounts.oauth2.initTokenClient({
                         client_id: CLIENT_ID,
                         scope: SCOPES,
@@ -42,23 +41,20 @@ export function initGoogleClient(onAuthChange: (user: User | null) => void): Pro
                             if (tokenResponse && tokenResponse.access_token) {
                                 const expiresInStr = tokenResponse.expires_in?.toString() || "3599";
                                 const expiryTime = new Date().getTime() + (parseInt(expiresInStr, 10) * 1000);
-                                
+
                                 localStorage.setItem('gapi_access_token', JSON.stringify(tokenResponse));
                                 localStorage.setItem('gapi_token_expiry', expiryTime.toString());
 
                                 gapi.client.setToken(tokenResponse);
-                                
-                                // Si había una operación pausada esperando el token, reanudarla
+
                                 if (tokenResolvePromise) {
                                     tokenResolvePromise();
                                     tokenResolvePromise = null;
                                     tokenRejectPromise = null;
                                 } else {
-                                    // Flujo de login normal
                                     updateLoginState(onAuthChange);
                                 }
                             } else {
-                                // El usuario cerró el popup o falló la autenticación
                                 if (tokenRejectPromise) {
                                     tokenRejectPromise(new Error('Renovación de token cancelada por el usuario.'));
                                     tokenResolvePromise = null;
@@ -71,20 +67,18 @@ export function initGoogleClient(onAuthChange: (user: User | null) => void): Pro
                         },
                     });
 
-                    // Inicializar cliente GAPI
                     gapi.load('client', async () => {
                         try {
                             await gapi.client.init({
                                 apiKey: API_KEY,
                                 discoveryDocs: DISCOVERY_DOCS,
                             });
-                            
+
                             const savedTokenStr = localStorage.getItem('gapi_access_token');
                             const expiryStr = localStorage.getItem('gapi_token_expiry');
 
                             if (savedTokenStr && expiryStr) {
                                 const expiryTime = parseInt(expiryStr, 10);
-                                // Verificar si el token guardado aún tiene vida útil
                                 if (new Date().getTime() < expiryTime) {
                                     const savedToken = JSON.parse(savedTokenStr);
                                     gapi.client.setToken(savedToken);
@@ -120,7 +114,7 @@ async function updateLoginState(onAuthChange: (user: User | null) => void) {
         onAuthChange(null);
         return;
     }
-    
+
     try {
         const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
             headers: { 'Authorization': `Bearer ${token.access_token}` }
@@ -162,19 +156,17 @@ export function handleSignOut() {
 
 /**
  * Validador principal. Se ejecuta antes de cada llamada a la API.
- * Si el token expira en menos de 5 minutos, pausa la ejecución y solicita uno nuevo.
  */
 async function ensureValidToken(): Promise<void> {
     const expiryStr = localStorage.getItem('gapi_token_expiry');
     const currentTime = new Date().getTime();
-    
+
     // Margen de seguridad: 300000 ms = 5 minutos
     if (!expiryStr || currentTime > (parseInt(expiryStr, 10) - 300000)) {
         console.log("Token expirado o a punto de expirar. Solicitando renovación...");
         return new Promise((resolve, reject) => {
             tokenResolvePromise = resolve;
             tokenRejectPromise = reject;
-            // Levanta el popup de Google para renovar la sesión interactiva
             tokenClient.requestAccessToken({ prompt: '' });
         });
     }
@@ -186,7 +178,7 @@ async function ensureValidToken(): Promise<void> {
 async function findOrCreateSpreadsheet(): Promise<string> {
     if (spreadsheetId) return spreadsheetId;
 
-    await ensureValidToken(); // Verificar token antes de actuar
+    await ensureValidToken();
 
     try {
         const response = await gapi.client.drive.files.list({
@@ -217,9 +209,9 @@ async function findOrCreateSpreadsheet(): Promise<string> {
  */
 export async function getSpreadsheetData(): Promise<AppData> {
     try {
-        await ensureValidToken(); // Verificar token antes de leer
+        await ensureValidToken();
         const ssId = await findOrCreateSpreadsheet();
-        
+
         const ranges = DATA_SHEETS.map(sheet => `${sheet}!A1`);
         const response = await gapi.client.sheets.spreadsheets.values.batchGet({
             spreadsheetId: ssId,
@@ -233,10 +225,12 @@ export async function getSpreadsheetData(): Promise<AppData> {
             try {
                 (data as any)[sheetName] = cellValue ? JSON.parse(cellValue) : (sheetName === 'semesterDates' ? null : []);
             } catch (e) {
-                 (data as any)[sheetName] = sheetName === 'semesterDates' ? null : [];
+                (data as any)[sheetName] = sheetName === 'semesterDates' ? null : [];
             }
         });
-        
+
+        const currentYear = new Date().getFullYear();
+
         return {
             courses: data.courses || [],
             students: data.students || [],
@@ -245,8 +239,8 @@ export async function getSpreadsheetData(): Promise<AppData> {
             evaluationInstances: data.evaluationInstances || [],
             grades: data.grades || [],
             semesterDates: data.semesterDates || {
-                firstSemester: { startDate: '2024-03-11', endDate: '2024-07-05' },
-                secondSemester: { startDate: '2024-08-05', endDate: '2024-11-29' },
+                firstSemester: { startDate: `${currentYear}-03-11`, endDate: `${currentYear}-07-05` },
+                secondSemester: { startDate: `${currentYear}-08-05`, endDate: `${currentYear}-11-29` },
             },
         };
 
@@ -261,9 +255,9 @@ export async function getSpreadsheetData(): Promise<AppData> {
  */
 export async function saveSpreadsheetData(data: AppData) {
     try {
-        await ensureValidToken(); // Verificar token antes de escribir
+        await ensureValidToken();
         const ssId = await findOrCreateSpreadsheet();
-        
+
         const dataForUpdate = DATA_SHEETS.map(sheetName => {
             const key = sheetName as keyof AppData;
             return {

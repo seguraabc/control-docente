@@ -1,41 +1,128 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTIgM2g2YTQgNCAwIDAgMSA0IDR2MTRhMyAzIDAgMCAwLTMtM0gyeioiIHN0cm9rZT0iIzRGNDZFNSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGZpbGw9Im5vbmUiPjwvcGF0aD48cGF0aCBkPSJNMjIgM2gtNmE0IDQgMCAwIDAtNCA0djE0YTMgMyAwIDAgMSAzLTNoN3oiIHN0cm9rZT0iIzRGNDZFNSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGZpbGw9Im5vbmUiPjwvcGF0aD48L3N2Zz4=" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Control Docente</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      // Configuración de Tailwind CSS para usar el modo oscuro basado en clases
-      tailwind.config = {
-        darkMode: 'class',
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHBhdGggZD0iTTIgM2g2YTQgNCAwIDAgMSA0IDR2MTRhMyAzIDAgMCAwLTMtM0gyeioiIHN0cm9rZT0iIzRGNDZFNSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGZpbGw9Im5vbmUiPjwvcGF0aD48cGF0aCBkPSJNMjIgM2gtNmE0IDQgMCAwIDAtNCA0djE0YTMgMyAwIDAgMSAzLTNoN3oiIHN0cm9rZT0iIzRGNDZFNSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGZpbGw9Im5vbmUiPjwvcGF0aD48L3N2Zz4=" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Control Docente</title>
+
+  <style>
+    :root,
+    :root[data-theme="blue"] {
+      --primary-50: 238 242 255;
+      --primary-100: 224 231 255;
+      --primary-200: 199 210 254;
+      --primary-300: 165 180 252;
+      --primary-400: 129 140 248;
+      --primary-500: 99 102 241;
+      --primary-600: 79 70 229;
+      --primary-700: 67 56 202;
+      --primary-800: 55 48 163;
+      --primary-900: 49 46 129;
+    }
+
+    :root[data-theme="green"] {
+      --primary-50: 236 253 245;
+      --primary-100: 209 250 229;
+      --primary-200: 167 243 208;
+      --primary-300: 110 231 183;
+      --primary-400: 52 211 153;
+      --primary-500: 16 185 129;
+      --primary-600: 5 150 105;
+      --primary-700: 4 120 87;
+      --primary-800: 6 95 70;
+      --primary-900: 6 78 59;
+    }
+
+    :root[data-theme="red"] {
+      --primary-50: 255 241 242;
+      --primary-100: 255 228 230;
+      --primary-200: 254 205 211;
+      --primary-300: 253 164 175;
+      --primary-400: 251 113 133;
+      --primary-500: 244 63 94;
+      --primary-600: 225 29 72;
+      --primary-700: 190 18 60;
+      --primary-800: 159 18 57;
+      --primary-900: 136 19 55;
+    }
+
+    :root[data-theme="yellow"] {
+      --primary-50: 255 251 235;
+      --primary-100: 254 243 199;
+      --primary-200: 253 230 138;
+      --primary-300: 252 211 77;
+      --primary-400: 251 191 36;
+      --primary-500: 245 158 11;
+      --primary-600: 217 119 6;
+      --primary-700: 180 83 9;
+      --primary-800: 146 64 14;
+      --primary-900: 120 53 15;
+    }
+
+    /* Transición suave para evitar saltos bruscos al cambiar el tamaño de letra */
+    html {
+      transition: font-size 0.2s ease-in-out;
+    }
+  </style>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            indigo: {
+              50: 'rgb(var(--primary-50) / <alpha-value>)',
+              100: 'rgb(var(--primary-100) / <alpha-value>)',
+              200: 'rgb(var(--primary-200) / <alpha-value>)',
+              300: 'rgb(var(--primary-300) / <alpha-value>)',
+              400: 'rgb(var(--primary-400) / <alpha-value>)',
+              500: 'rgb(var(--primary-500) / <alpha-value>)',
+              600: 'rgb(var(--primary-600) / <alpha-value>)',
+              700: 'rgb(var(--primary-700) / <alpha-value>)',
+              800: 'rgb(var(--primary-800) / <alpha-value>)',
+              900: 'rgb(var(--primary-900) / <alpha-value>)',
+            }
+          }
+        }
       }
-    </script>
-    <script>
-      // Script para evitar el parpadeo del tema (FOUC)
-      // Se ejecuta inmediatamente para establecer la clase 'dark' o 'light' antes de que se renderice el contenido
-      if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    </script>
+    }
+  </script>
+  <script>
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
+    const savedColor = localStorage.getItem('colorTheme') || 'blue';
+    document.documentElement.setAttribute('data-theme', savedColor);
+
+    // Aplicar tamaño de fuente guardado (o 16px por defecto)
+    const savedFontSize = localStorage.getItem('fontSize') || '16';
+    document.documentElement.style.fontSize = savedFontSize + 'px';
+  </script>
   <script type="importmap">
-{
-  "imports": {
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
-  }
-}
-</script>
+    {
+      "imports": {
+        "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0",
+        "react": "https://aistudiocdn.com/react@^19.2.0",
+        "react/": "https://aistudiocdn.com/react@^19.2.0/",
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+      }
+    }
+    </script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
 </head>
-  <body class="bg-gray-50 dark:bg-gray-950">
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+
+<body class="bg-gray-50 dark:bg-gray-950">
+  <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+
 </html>
