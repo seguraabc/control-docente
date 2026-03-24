@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Course } from '../types';
+import { Course, CourseTerm } from '../types';
 
 interface CourseModalProps {
   course: Course | null;
@@ -20,17 +20,19 @@ const CourseModal: React.FC<CourseModalProps> = ({ course, onClose, onSave }) =>
   const [name, setName] = useState('');
   const [schedule, setSchedule] = useState('');
   const [scheduleDays, setScheduleDays] = useState<number[]>([]);
+  const [term, setTerm] = useState<CourseTerm>('anual');
 
   useEffect(() => {
     if (course) {
       setName(course.name);
       setSchedule(course.schedule);
       setScheduleDays(course.scheduleDays || []);
+      setTerm(course.term || 'anual');
     }
   }, [course]);
 
   const handleToggleDay = (dayId: number) => {
-    setScheduleDays(prev => 
+    setScheduleDays(prev =>
       prev.includes(dayId) ? prev.filter(d => d !== dayId) : [...prev, dayId]
     );
   };
@@ -38,7 +40,7 @@ const CourseModal: React.FC<CourseModalProps> = ({ course, onClose, onSave }) =>
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onSave({ name, schedule, scheduleDays });
+    onSave({ name, schedule, scheduleDays, term });
   };
 
   return (
@@ -68,17 +70,33 @@ const CourseModal: React.FC<CourseModalProps> = ({ course, onClose, onSave }) =>
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Horario (Descripción visual)
-            </label>
-            <input
-              type="text"
-              value={schedule}
-              onChange={(e) => setSchedule(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              placeholder="Ej: 18:00 a 20:00 hs"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Horario (Texto)
+              </label>
+              <input
+                type="text"
+                value={schedule}
+                onChange={(e) => setSchedule(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                placeholder="Ej: 18:00 a 20:00"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Periodo
+              </label>
+              <select
+                value={term}
+                onChange={(e) => setTerm(e.target.value as CourseTerm)}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              >
+                <option value="anual">Anual</option>
+                <option value="primer_cuatrimestre">1° Cuatrimestre</option>
+                <option value="segundo_cuatrimestre">2° Cuatrimestre</option>
+              </select>
+            </div>
           </div>
 
           <div>
@@ -91,11 +109,10 @@ const CourseModal: React.FC<CourseModalProps> = ({ course, onClose, onSave }) =>
                   key={day.id}
                   type="button"
                   onClick={() => handleToggleDay(day.id)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    scheduleDays.includes(day.id)
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${scheduleDays.includes(day.id)
                       ? 'bg-indigo-600 text-white shadow-md'
                       : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }`}
+                    }`}
                 >
                   {day.label}
                 </button>

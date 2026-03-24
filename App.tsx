@@ -39,7 +39,6 @@ const App: React.FC = () => {
     return (localStorage.getItem('colorTheme') as ColorTheme) || 'blue';
   });
 
-  // NUEVO: Estado para el tamaño de fuente (en píxeles). Default 16px.
   const [fontSize, setFontSize] = useState<number>(() => {
     return Number(localStorage.getItem('fontSize')) || 16;
   });
@@ -59,7 +58,6 @@ const App: React.FC = () => {
     localStorage.setItem('colorTheme', colorTheme);
   }, [colorTheme]);
 
-  // NUEVO: Efecto para inyectar el tamaño en el documento
   useEffect(() => {
     document.documentElement.style.fontSize = `${fontSize}px`;
     localStorage.setItem('fontSize', fontSize.toString());
@@ -194,6 +192,25 @@ const App: React.FC = () => {
 
   const handleArchiveCourse = useCallback((courseId: string) => {
     setCourses(prev => prev.map(c => c.id === courseId ? { ...c, status: c.status === 'activo' ? 'archivado' : 'activo' } : c));
+  }, []);
+
+  // Lógica de eliminación en cascada
+  const handleDeleteCourse = useCallback((courseId: string) => {
+    setAppData(prev => {
+      if (!prev) return prev;
+
+      const studentsToDelete = prev.students.filter(s => s.courseId === courseId).map(s => s.id);
+
+      return {
+        ...prev,
+        courses: prev.courses.filter(c => c.id !== courseId),
+        students: prev.students.filter(s => s.courseId !== courseId),
+        classSessions: prev.classSessions.filter(cs => cs.courseId !== courseId),
+        evaluationInstances: prev.evaluationInstances.filter(ei => ei.courseId !== courseId),
+        attendance: prev.attendance.filter(a => !studentsToDelete.includes(a.studentId)),
+        grades: prev.grades.filter(g => !studentsToDelete.includes(g.studentId)),
+      };
+    });
   }, []);
 
   const handleAddStudent = useCallback((studentData: Omit<Student, 'id' | 'courseId'>) => {
@@ -349,6 +366,7 @@ const App: React.FC = () => {
             onArchiveCourse={handleArchiveCourse}
             onSelectCourse={handleSelectCourse}
             onOpenSemesterModal={handleOpenSemesterModal}
+            onDeleteCourse={handleDeleteCourse}
           />
         ) : (
           <CourseDetail

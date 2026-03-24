@@ -4,11 +4,14 @@ export interface User {
   picture: string;
 }
 
+export type CourseTerm = 'anual' | 'primer_cuatrimestre' | 'segundo_cuatrimestre';
+
 export interface Course {
   id: string;
   name: string;
   schedule: string;
-  scheduleDays?: number[]; // ARRAY CLAVE: [1, 3] significa Lunes y Miércoles
+  scheduleDays?: number[];
+  term?: CourseTerm; // Controla si es anual o de un solo cuatrimestre
   status: 'activo' | 'archivado';
 }
 
@@ -47,13 +50,13 @@ export interface Grade {
 }
 
 export interface Semester {
-    startDate: string; // YYYY-MM-DD
-    endDate: string; // YYYY-MM-DD
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
 }
 
 export interface SemesterDates {
-    firstSemester: Semester;
-    secondSemester: Semester;
+  firstSemester: Semester;
+  secondSemester: Semester;
 }
 
 export interface AppData {
