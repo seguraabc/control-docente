@@ -133,6 +133,14 @@ const App: React.FC = () => {
     };
   }, []);
 
+  const handleLogout = () => {
+    handleSignOut();
+    setUser(null);
+    setAppData(null);
+    setSelectedCourseId(null);
+    localStorage.removeItem('google_auth_user');
+  };
+
   const loadData = async () => {
     setIsLoading(true);
     try {
@@ -140,6 +148,8 @@ const App: React.FC = () => {
       setAppData(data);
     } catch (error) {
       console.error("Error al cargar los datos de la hoja de cálculo", error);
+      // Forzamos el cierre de sesión si falla la validación del token silencioso en móviles
+      handleLogout();
     } finally {
       setIsLoading(false);
     }
@@ -157,14 +167,6 @@ const App: React.FC = () => {
   useDebouncedEffect(debouncedSave, [appData], 1500);
 
   const handleLogin = () => handleSignIn();
-
-  const handleLogout = () => {
-    handleSignOut();
-    setUser(null);
-    setAppData(null);
-    setSelectedCourseId(null);
-    localStorage.removeItem('google_auth_user');
-  };
 
   const handleSelectCourse = useCallback((courseId: string) => {
     history.pushState({ page: 'course-detail', courseId }, '', window.location.href);
@@ -352,8 +354,17 @@ const App: React.FC = () => {
 
   if (!appData) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
-        <p className="text-gray-600 dark:text-gray-400">Cargando datos del usuario...</p>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col items-center justify-center p-4 text-center">
+        <div className="mt-4 border-4 border-gray-300 dark:border-gray-700 border-t-indigo-500 rounded-full w-8 h-8 animate-spin mb-4"></div>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">Cargando datos del usuario...</p>
+
+        {/* Salida de emergencia para celulares que bloquean la renovación del token */}
+        <button
+          onClick={handleLogout}
+          className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors"
+        >
+          ¿Demora mucho? Cerrar sesión y reintentar
+        </button>
       </div>
     );
   }
@@ -413,7 +424,7 @@ const App: React.FC = () => {
       </main>
 
       <footer className="py-6 text-center text-sm font-medium text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-950/50 backdrop-blur-sm">
-        Desarrollado por NODO [Soluciones digitales]-2026
+        Desarrollado por NODO [Soluciones digitales]- 2026
       </footer>
 
       {isModalOpen && (
