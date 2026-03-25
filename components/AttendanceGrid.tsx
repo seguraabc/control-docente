@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Student, AttendanceRecord, AttendanceStatus, ClassSession, SemesterDates, Course } from '../types';
 import { DownloadIcon } from './icons';
 
@@ -89,6 +89,25 @@ const AttendanceButton: React.FC<{
 
 const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, classSessions, course, semesterDates, onSetAttendance, onSetBulkAttendance, onToggleClassSession }) => {
     const classDates = useMemo(() => generateClassDates(course, semesterDates), [course, semesterDates]);
+    const [mobileDate, setMobileDate] = useState<string>('');
+
+    // Lógica para preseleccionar la fecha más cercana al día de hoy en la vista móvil
+    useEffect(() => {
+        if (classDates.length > 0 && !mobileDate) {
+            const tzDate = new Date();
+            const year = tzDate.getFullYear();
+            const month = String(tzDate.getMonth() + 1).padStart(2, '0');
+            const day = String(tzDate.getDate()).padStart(2, '0');
+            const todayStr = `${year}-${month}-${day}`;
+
+            const pastOrTodayDates = classDates.filter(d => d <= todayStr);
+            if (pastOrTodayDates.length > 0) {
+                setMobileDate(pastOrTodayDates[pastOrTodayDates.length - 1]);
+            } else {
+                setMobileDate(classDates[0]);
+            }
+        }
+    }, [classDates, mobileDate]);
 
     if (!semesterDates || !semesterDates.firstSemester.startDate) {
         return (
@@ -157,11 +176,13 @@ const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, c
         );
     }
 
+    // Estado de la clase seleccionada en móvil
+    const mobileSession = classSessions.find(s => s.date === mobileDate);
+    const isMobileTaught = mobileSession ? mobileSession.taught : false;
+
     return (
         <div>
-            <div className="md:hidden portrait:flex landscape:hidden items-center justify-center p-4 text-center bg-yellow-100 dark:bg-yellow-800/50 text-yellow-800 dark:text-yellow-300 m-4 rounded-lg border border-yellow-300 dark:border-yellow-700">
-                <p className="font-semibold text-sm">Para una mejor experiencia, por favor rota tu dispositivo a modo horizontal.</p>
-            </div>
+            {/* Botón de exportación (Visible en ambas vistas) */}
             <div className="p-4 flex justify-end border-b border-gray-200 dark:border-gray-800">
                 <button
                     onClick={handleExportCSV}
@@ -171,7 +192,92 @@ const AttendanceGrid: React.FC<AttendanceGridProps> = ({ students, attendance, c
                     Exportar CSV
                 </button>
             </div>
-            <div className="overflow-x-auto">
+
+            {/* --- VISTA MÓVIL (Oculta en md para arriba) --- */}
+            <div className="block md:hidden p-4 space-y-6 bg-gray-50 dark:bg-gray-950/50">
+
+                {/* Controles de Clase del Día */}
+                <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Fecha de la clase</label>
+                    <select
+                        value={mobileDate}
+                        onChange={(e) => setMobileDate(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-indigo-500 appearance-none"
+                    >
+                        {classDates.map(d => (
+                            <option key={d} value={d}>
+                                {new Date(d + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long' }).replace(/^\w/, (c) => c.toUpperCase())}
+                            </option>
+                        ))}
+                    </select>
+
+                    <div className="mt-5 flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700">
+                        <span className="text-base font-semibold text-gray-700 dark:text-gray-300">¿Se dictó la clase?</span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked={isMobileTaught} onChange={() => onToggleClassSession(mobileDate)} className="sr-only peer" />
+                            <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                        </label>
+                    </div>
+                </div>
+
+                {/* Carga Masiva (Solo visible si la clase se dictó) */}
+                {isMobileTaught && (
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            onClick={() => onSetBulkAttendance(mobileDate, 'P', students.map(s => s.id))}
+                            className="py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold shadow-sm active:scale-95 transition-transform"
+                        >
+                            Todos P
+                        </button>
+                        <button
+                            onClick={() => onSetBulkAttendance(mobileDate, 'A', students.map(s => s.id))}
+                            className="py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-sm active:scale-95 transition-transform"
+                        >
+                            Todos A
+                        </button>
+                    </div>
+                )}
+
+                {/* Lista Vertical de Alumnos */}
+                <div className="space-y-3 pb-8">
+                    {students.map(student => {
+                        const status = getStatusForStudent(student.id, mobileDate);
+                        return (
+                            <div key={student.id} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col gap-3">
+                                <div className="font-semibold text-gray-900 dark:text-gray-100 text-lg">
+                                    {student.lastName.toUpperCase()}, {student.firstName}
+                                </div>
+                                <div className="flex gap-2 h-14">
+                                    <button
+                                        disabled={!isMobileTaught}
+                                        onClick={() => onSetAttendance(student.id, mobileDate, 'P')}
+                                        className={`flex-1 rounded-xl font-bold text-xl transition-all shadow-sm ${status === 'P' ? 'bg-green-500 text-white ring-2 ring-green-300 dark:ring-green-800 ring-offset-1 dark:ring-offset-gray-800 scale-[1.02]' : 'bg-gray-100 dark:bg-gray-700/50 text-gray-400 dark:text-gray-500'} ${!isMobileTaught ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}
+                                    >
+                                        P
+                                    </button>
+                                    <button
+                                        disabled={!isMobileTaught}
+                                        onClick={() => onSetAttendance(student.id, mobileDate, 'A')}
+                                        className={`flex-1 rounded-xl font-bold text-xl transition-all shadow-sm ${status === 'A' ? 'bg-red-500 text-white ring-2 ring-red-300 dark:ring-red-800 ring-offset-1 dark:ring-offset-gray-800 scale-[1.02]' : 'bg-gray-100 dark:bg-gray-700/50 text-gray-400 dark:text-gray-500'} ${!isMobileTaught ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}
+                                    >
+                                        A
+                                    </button>
+                                    <button
+                                        disabled={!isMobileTaught}
+                                        onClick={() => onSetAttendance(student.id, mobileDate, 'J')}
+                                        className={`flex-1 rounded-xl font-bold text-xl transition-all shadow-sm ${status === 'J' ? 'bg-yellow-500 text-white ring-2 ring-yellow-300 dark:ring-yellow-800 ring-offset-1 dark:ring-offset-gray-800 scale-[1.02]' : 'bg-gray-100 dark:bg-gray-700/50 text-gray-400 dark:text-gray-500'} ${!isMobileTaught ? 'opacity-50 cursor-not-allowed' : 'active:scale-95'}`}
+                                    >
+                                        J
+                                    </button>
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+
+            {/* --- VISTA ESCRITORIO (Oculta en móvil) --- */}
+            <div className="hidden md:block overflow-x-auto">
                 <table className="w-full min-w-max text-sm text-left text-gray-700 dark:text-gray-300">
                     <thead className="text-xs text-gray-700 dark:text-gray-400 uppercase bg-gray-100 dark:bg-gray-800">
                         <tr>
