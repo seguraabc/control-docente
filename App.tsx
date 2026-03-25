@@ -194,7 +194,6 @@ const App: React.FC = () => {
     setCourses(prev => prev.map(c => c.id === courseId ? { ...c, status: c.status === 'activo' ? 'archivado' : 'activo' } : c));
   }, []);
 
-  // Lógica de eliminación en cascada
   const handleDeleteCourse = useCallback((courseId: string) => {
     setAppData(prev => {
       if (!prev) return prev;
@@ -229,6 +228,10 @@ const App: React.FC = () => {
     setStudents(prev => [...prev, ...newStudents]);
   }, [selectedCourseId]);
 
+  const handleEditStudent = useCallback((studentId: string, firstName: string, lastName: string) => {
+    setStudents(prev => prev.map(s => s.id === studentId ? { ...s, firstName, lastName } : s));
+  }, []);
+
   const handleDeleteStudent = useCallback((studentId: string) => {
     setStudents(prev => prev.filter(s => s.id !== studentId));
     setAttendance(prev => prev.filter(a => a.studentId !== studentId));
@@ -244,6 +247,21 @@ const App: React.FC = () => {
       } else {
         return [...prev, { studentId, date, status }];
       }
+    });
+  }, []);
+
+  const handleSetBulkAttendance = useCallback((date: string, status: AttendanceStatus, studentIds: string[]) => {
+    setAttendance(prev => {
+      const newAttendance = [...prev];
+      studentIds.forEach(studentId => {
+        const recordIndex = newAttendance.findIndex(a => a.studentId === studentId && a.date === date);
+        if (recordIndex > -1) {
+          newAttendance[recordIndex] = { ...newAttendance[recordIndex], status };
+        } else {
+          newAttendance.push({ studentId, date, status });
+        }
+      });
+      return newAttendance;
     });
   }, []);
 
@@ -380,8 +398,10 @@ const App: React.FC = () => {
             onBack={handleBackToDashboard}
             onAddStudent={handleAddStudent}
             onAddMultipleStudents={handleAddMultipleStudents}
+            onEditStudent={handleEditStudent}
             onDeleteStudent={handleDeleteStudent}
             onSetAttendance={handleSetAttendance}
+            onSetBulkAttendance={handleSetBulkAttendance}
             onToggleClassSession={handleToggleClassSession}
             onAddEvaluationInstance={handleAddEvaluationInstance}
             onUpdateEvaluationOrder={handleUpdateEvaluationOrder}

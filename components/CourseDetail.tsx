@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Course, Student, AttendanceRecord, AttendanceStatus, ClassSession, EvaluationInstance, Grade, SemesterDates } from '../types';
 import StudentList from './StudentList';
 import AttendanceGrid from './AttendanceGrid';
@@ -15,8 +15,10 @@ interface CourseDetailProps {
   onBack: () => void;
   onAddStudent: (studentData: Omit<Student, 'id' | 'courseId'>) => void;
   onAddMultipleStudents: (studentsData: Omit<Student, 'id' | 'courseId'>[]) => void;
+  onEditStudent: (id: string, firstName: string, lastName: string) => void;
   onDeleteStudent: (studentId: string) => void;
   onSetAttendance: (studentId: string, date: string, status: AttendanceStatus) => void;
+  onSetBulkAttendance: (date: string, status: AttendanceStatus, studentIds: string[]) => void;
   onToggleClassSession: (date: string) => void;
   onAddEvaluationInstance: (name: string) => void;
   onUpdateEvaluationOrder: (updatedInstances: EvaluationInstance[]) => void;
@@ -28,11 +30,15 @@ interface CourseDetailProps {
 type ActiveTab = 'students' | 'attendance' | 'grades';
 
 const CourseDetail: React.FC<CourseDetailProps> = (props) => {
-  const { 
-      course, students, 
-      onBack, 
-  } = props;
+  const { course, onBack } = props;
   const [activeTab, setActiveTab] = useState<ActiveTab>('students');
+
+  // Motor centralizado de ordenamiento alfabético
+  const sortedStudents = useMemo(() => {
+    return [...props.students].sort((a, b) =>
+      a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName)
+    );
+  }, [props.students]);
 
   return (
     <div>
@@ -48,60 +54,59 @@ const CourseDetail: React.FC<CourseDetailProps> = (props) => {
         <nav className="-mb-px flex space-x-6" aria-label="Tabs">
           <button
             onClick={() => setActiveTab('students')}
-            className={`${
-              activeTab === 'students'
+            className={`${activeTab === 'students'
                 ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                 : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-400 dark:hover:border-gray-500'
-            } whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors`}
+              } whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors`}
           >
-            Estudiantes ({students.length})
+            Estudiantes ({sortedStudents.length})
           </button>
           <button
             onClick={() => setActiveTab('attendance')}
-            className={`${
-              activeTab === 'attendance'
+            className={`${activeTab === 'attendance'
                 ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                 : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-400 dark:hover:border-gray-500'
-            } whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors`}
+              } whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors`}
           >
             Asistencia
           </button>
           <button
             onClick={() => setActiveTab('grades')}
-            className={`${
-              activeTab === 'grades'
+            className={`${activeTab === 'grades'
                 ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                 : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-400 dark:hover:border-gray-500'
-            } whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors`}
+              } whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors`}
           >
             Calificaciones
           </button>
         </nav>
       </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden">
         {activeTab === 'students' && (
           <StudentList
-            students={props.students}
+            students={sortedStudents}
             onAddStudent={props.onAddStudent}
             onAddMultipleStudents={props.onAddMultipleStudents}
+            onEditStudent={props.onEditStudent}
             onDeleteStudent={props.onDeleteStudent}
           />
         )}
         {activeTab === 'attendance' && (
-           <AttendanceGrid
-            students={props.students}
+          <AttendanceGrid
+            students={sortedStudents}
             attendance={props.attendance}
             classSessions={props.classSessions}
             course={course}
             semesterDates={props.semesterDates}
             onSetAttendance={props.onSetAttendance}
+            onSetBulkAttendance={props.onSetBulkAttendance}
             onToggleClassSession={props.onToggleClassSession}
           />
         )}
-         {activeTab === 'grades' && (
-           <GradesGrid
-            students={props.students}
+        {activeTab === 'grades' && (
+          <GradesGrid
+            students={sortedStudents}
             evaluationInstances={props.evaluationInstances}
             grades={props.grades}
             onAddEvaluationInstance={props.onAddEvaluationInstance}
