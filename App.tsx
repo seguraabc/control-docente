@@ -413,7 +413,7 @@ const App: React.FC = () => {
       </main>
 
       <footer className="py-6 text-center text-sm font-medium text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-950/50 backdrop-blur-sm">
-        Desarrollado por NODO [Soluciones digitales]- 2026
+        Desarrollado por NODO [Soluciones digitales]-2026
       </footer>
 
       {isModalOpen && (
