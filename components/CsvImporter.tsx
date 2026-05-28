@@ -56,14 +56,29 @@ const CsvImporter: React.FC<CsvImporterProps> = ({ onImportComplete, onCancel })
       setLoading(true);
       setError(null);
       
-      const importedData: Partial<AppData> = {};
+      let importedData: Partial<AppData> = {};
       const files = Array.from(e.target.files);
       
       try {
           for (const file of files) {
               const text = await file.text();
-              const parsed = parseCSV(text);
               const name = file.name.toLowerCase();
+
+              // Intento de detectar si en realidad es un JSON volcado (rescatado en crudo)
+              if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
+                  try {
+                      const jsonData = JSON.parse(text);
+                      // Si tiene las propiedades de AppData, lo tomamos directo
+                      if (jsonData.courses || jsonData.students) {
+                          importedData = { ...importedData, ...jsonData };
+                          continue;
+                      }
+                  } catch (e) {
+                      // Ignorar y procesar como CSV
+                  }
+              }
+
+              const parsed = parseCSV(text);
               
               if (name.includes('course')) {
                   importedData.courses = parsed.map(p => ({...p, scheduleDays: p.scheduleDays ? String(p.scheduleDays).split(/[,;]/).map(Number) : []})) as any;
@@ -80,6 +95,36 @@ const CsvImporter: React.FC<CsvImporterProps> = ({ onImportComplete, onCancel })
               }
           }
           
+          // Reconstrucción inteligente: Crear cursos si no existen pero hay alumnos asociados
+          const existingCourseIds = new Set(importedData.courses?.map(c => c.id) || []);
+          const neededCourseIds = new Set<string>();
+
+          // Extraer IDs de cursos necesarios de estudiantes, sesiones y evaluaciones
+          importedData.students?.forEach(s => neededCourseIds.add(s.courseId));
+          importedData.classSessions?.forEach(cs => neededCourseIds.add(cs.courseId));
+          importedData.evaluationInstances?.forEach(ei => neededCourseIds.add(ei.courseId));
+
+          const newCourses: any[] = [];
+          neededCourseIds.forEach(id => {
+              if (id && !existingCourseIds.has(id)) {
+                  newCourses.push({
+                      id,
+                      name: `Curso recuperado (${id})`,
+                      schedule: 'Sin horario',
+                      scheduleDays: [],
+                      status: 'activo'
+                  });
+              }
+          });
+
+          if (newCourses.length > 0) {
+              importedData.courses = [...(importedData.courses || []), ...newCourses];
+          }
+
+          if (Object.keys(importedData).length === 0) {
+              throw new Error("No se pudo extraer información válida de los archivos.");
+          }
+
           onImportComplete(importedData);
       } catch (err: any) {
           setError(err.message || 'Error al parsear los archivos CSV.');

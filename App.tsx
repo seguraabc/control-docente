@@ -193,17 +193,27 @@ const App: React.FC = () => {
 
   const handleOpenImportModal = useCallback(() => setIsImportModalOpen(true), []);
   const handleCloseImportModal = useCallback(() => setIsImportModalOpen(false), []);
+
   const handleImportComplete = useCallback((importedData: Partial<AppData>) => {
       setAppData(prev => {
           if (!prev) return prev;
+          
+          const mergeArray = <T extends { id?: string, studentId?: string, courseId?: string, date?: string }>(oldArr: T[], newArr: T[] | undefined, keyFunc: (item: T) => string): T[] => {
+              if (!newArr || newArr.length === 0) return oldArr;
+              const map = new Map<string, T>();
+              oldArr.forEach(item => map.set(keyFunc(item), item));
+              newArr.forEach(item => map.set(keyFunc(item), item));
+              return Array.from(map.values());
+          };
+
           return {
               ...prev,
-              courses: importedData.courses || prev.courses,
-              students: importedData.students || prev.students,
-              attendance: importedData.attendance || prev.attendance,
-              classSessions: importedData.classSessions || prev.classSessions,
-              evaluationInstances: importedData.evaluationInstances || prev.evaluationInstances,
-              grades: importedData.grades || prev.grades,
+              courses: mergeArray(prev.courses, importedData.courses, c => c.id || Math.random().toString()),
+              students: mergeArray(prev.students, importedData.students, s => s.id || Math.random().toString()),
+              attendance: mergeArray(prev.attendance, importedData.attendance, a => `${a.studentId}-${a.date}`),
+              classSessions: mergeArray(prev.classSessions, importedData.classSessions, cs => `${cs.courseId}-${cs.date}`),
+              evaluationInstances: mergeArray(prev.evaluationInstances, importedData.evaluationInstances, ei => ei.id || Math.random().toString()),
+              grades: mergeArray(prev.grades, importedData.grades, g => `${g.studentId}-${g.evaluationInstanceId}`),
           };
       });
       setIsImportModalOpen(false);
