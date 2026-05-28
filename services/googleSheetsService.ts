@@ -2,7 +2,7 @@
 declare const gapi: any;
 declare const google: any;
 
-import { User, AppData } from '../types';
+import { User, AppData, Course, Student, AttendanceRecord, ClassSession, EvaluationInstance, Grade, SemesterDates } from '../types';
 import { GOOGLE_CONFIG } from '../config';
 
 const API_KEY = GOOGLE_CONFIG.API_KEY;
@@ -16,15 +16,21 @@ let tokenClient: any;
 let spreadsheetId: string | null = null;
 let globalAuthChangeCallback: ((user: User | null) => void) | null = null;
 
-// Controladores de promesas para pausar/reanudar la ejecución de la API
 let tokenResolvePromise: ((value: void) => void) | null = null;
 let tokenRejectPromise: ((reason?: any) => void) | null = null;
 
 const DATA_SHEETS = ['courses', 'students', 'attendance', 'classSessions', 'evaluationInstances', 'grades', 'semesterDates'];
 
-/**
- * Initializes the Google API and Identity Services clients.
- */
+const HEADERS = {
+    courses: ['id', 'name', 'schedule', 'scheduleDays', 'term', 'status'],
+    students: ['id', 'courseId', 'firstName', 'lastName'],
+    attendance: ['studentId', 'date', 'status'],
+    classSessions: ['courseId', 'date', 'taught'],
+    evaluationInstances: ['id', 'courseId', 'name', 'order'],
+    grades: ['studentId', 'evaluationInstanceId', 'value'],
+    semesterDates: ['semester', 'startDate', 'endDate']
+};
+
 export function initGoogleClient(onAuthChange: (user: User | null) => void): Promise<void> {
     globalAuthChangeCallback = onAuthChange;
 
@@ -91,6 +97,9 @@ export function initGoogleClient(onAuthChange: (user: User | null) => void): Pro
                                 }
                             }
 
+                            // Intento de login silencioso
+                            tokenClient.requestAccessToken({ prompt: 'none' });
+
                             onAuthChange(null);
                             resolve();
                         } catch (e) {
@@ -105,9 +114,6 @@ export function initGoogleClient(onAuthChange: (user: User | null) => void): Pro
     });
 }
 
-/**
- * Actualiza el estado de login y obtiene el perfil del usuario.
- */
 async function updateLoginState(onAuthChange: (user: User | null) => void) {
     let token = gapi.client.getToken();
     if (token === null) {
@@ -127,6 +133,9 @@ async function updateLoginState(onAuthChange: (user: User | null) => void) {
             picture: profile.picture
         };
         onAuthChange(user);
+        
+        // Al iniciar sesión exitosamente, intentamos sincronizar datos pendientes
+        syncOfflineData();
     } catch (e) {
         console.error("Error fetching user profile", e);
         onAuthChange(null);
@@ -134,7 +143,7 @@ async function updateLoginState(onAuthChange: (user: User | null) => void) {
 }
 
 export function handleSignIn() {
-    tokenClient.requestAccessToken({ prompt: '' });
+    tokenClient.requestAccessToken({ prompt: 'consent' });
 }
 
 export function handleSignOut() {
@@ -154,27 +163,20 @@ export function handleSignOut() {
     }
 }
 
-/**
- * Validador principal. Se ejecuta antes de cada llamada a la API.
- */
 async function ensureValidToken(): Promise<void> {
     const expiryStr = localStorage.getItem('gapi_token_expiry');
     const currentTime = new Date().getTime();
 
-    // Margen de seguridad: 300000 ms = 5 minutos
     if (!expiryStr || currentTime > (parseInt(expiryStr, 10) - 300000)) {
-        console.log("Token expirado o a punto de expirar. Solicitando renovación...");
+        console.log("Token expirado o a punto de expirar. Solicitando renovación silenciosa...");
         return new Promise((resolve, reject) => {
             tokenResolvePromise = resolve;
             tokenRejectPromise = reject;
-            tokenClient.requestAccessToken({ prompt: '' });
+            tokenClient.requestAccessToken({ prompt: 'none' });
         });
     }
 }
 
-/**
- * Busca el archivo de la hoja de cálculo o lo crea si no existe.
- */
 async function findOrCreateSpreadsheet(): Promise<string> {
     if (spreadsheetId) return spreadsheetId;
 
@@ -204,28 +206,73 @@ async function findOrCreateSpreadsheet(): Promise<string> {
     }
 }
 
-/**
- * Carga todos los datos desde la hoja de cálculo.
- */
+function rowToObject(headers: string[], row: any[]) {
+    const obj: any = {};
+    headers.forEach((h, i) => {
+        obj[h] = row[i];
+    });
+    return obj;
+}
+
+function objectToRow(headers: string[], obj: any) {
+    return headers.map(h => {
+        const val = obj[h];
+        if (Array.isArray(val)) return val.join(',');
+        if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
+        return val !== undefined && val !== null ? String(val) : '';
+    });
+}
+
 export async function getSpreadsheetData(): Promise<AppData> {
     try {
         await ensureValidToken();
         const ssId = await findOrCreateSpreadsheet();
 
-        const ranges = DATA_SHEETS.map(sheet => `${sheet}!A1`);
+        const ranges = DATA_SHEETS.map(sheet => `${sheet}!A:Z`);
         const response = await gapi.client.sheets.spreadsheets.values.batchGet({
             spreadsheetId: ssId,
             ranges: ranges,
         });
 
         const data: Partial<AppData> = {};
+        
         response.result.valueRanges?.forEach((valueRange: any, index: number) => {
             const sheetName = DATA_SHEETS[index] as keyof AppData;
-            const cellValue = valueRange.values?.[0]?.[0];
-            try {
-                (data as any)[sheetName] = cellValue ? JSON.parse(cellValue) : (sheetName === 'semesterDates' ? null : []);
-            } catch (e) {
+            const rows = valueRange.values || [];
+            
+            if (rows.length <= 1) {
                 (data as any)[sheetName] = sheetName === 'semesterDates' ? null : [];
+                return;
+            }
+
+            const headers = rows[0];
+            const dataRows = rows.slice(1);
+
+            if (sheetName === 'semesterDates') {
+                const dates: any = {};
+                dataRows.forEach((row: any) => {
+                    const obj = rowToObject(headers, row);
+                    if (obj.semester === 'firstSemester') {
+                        dates.firstSemester = { startDate: obj.startDate, endDate: obj.endDate };
+                    } else if (obj.semester === 'secondSemester') {
+                        dates.secondSemester = { startDate: obj.startDate, endDate: obj.endDate };
+                    }
+                });
+                data.semesterDates = dates.firstSemester && dates.secondSemester ? dates as SemesterDates : null;
+            } else {
+                (data as any)[sheetName] = dataRows.map((row: any) => {
+                    const obj = rowToObject(headers, row);
+                    if (sheetName === 'courses') {
+                        return { ...obj, scheduleDays: obj.scheduleDays ? String(obj.scheduleDays).split(',').map(Number) : [] };
+                    }
+                    if (sheetName === 'classSessions') {
+                        return { ...obj, taught: obj.taught === 'TRUE' };
+                    }
+                    if (sheetName === 'evaluationInstances') {
+                        return { ...obj, order: Number(obj.order) };
+                    }
+                    return obj;
+                });
             }
         });
 
@@ -246,13 +293,15 @@ export async function getSpreadsheetData(): Promise<AppData> {
 
     } catch (err) {
         console.error("Error al obtener datos de la hoja de cálculo:", err);
+        // Fallback a datos locales si existen
+        const offlineData = localStorage.getItem('unsynced_app_data');
+        if (offlineData) {
+            return JSON.parse(offlineData) as AppData;
+        }
         throw err;
     }
 }
 
-/**
- * Guarda todos los datos en la hoja de cálculo.
- */
 export async function saveSpreadsheetData(data: AppData) {
     try {
         await ensureValidToken();
@@ -260,22 +309,60 @@ export async function saveSpreadsheetData(data: AppData) {
 
         const dataForUpdate = DATA_SHEETS.map(sheetName => {
             const key = sheetName as keyof AppData;
+            const headers = HEADERS[key];
+            const items = data[key];
+            
+            let values = [headers];
+            
+            if (sheetName === 'semesterDates') {
+                const dates = data.semesterDates;
+                if (dates) {
+                    values.push(['firstSemester', dates.firstSemester.startDate, dates.firstSemester.endDate]);
+                    values.push(['secondSemester', dates.secondSemester.startDate, dates.secondSemester.endDate]);
+                }
+            } else if (Array.isArray(items)) {
+                const rows = items.map(item => objectToRow(headers, item));
+                values = values.concat(rows);
+            }
+
             return {
                 range: `${sheetName}!A1`,
-                values: [[JSON.stringify(data[key])]]
+                values: values
             };
+        });
+
+        // Limpiamos los datos anteriores para evitar filas huérfanas si la nueva lista es más corta
+        await gapi.client.sheets.spreadsheets.values.batchClear({
+            spreadsheetId: ssId,
+            ranges: DATA_SHEETS.map(sheet => `${sheet}!A:Z`)
         });
 
         await gapi.client.sheets.spreadsheets.values.batchUpdate({
             spreadsheetId: ssId,
             resource: {
-                valueInputOption: 'RAW',
+                valueInputOption: 'USER_ENTERED',
                 data: dataForUpdate
             }
         });
 
+        // Si guardó con éxito, borramos el respaldo offline
+        localStorage.removeItem('unsynced_app_data');
     } catch (err) {
-        console.error("Error al guardar datos en la hoja de cálculo:", err);
+        console.error("Error al guardar datos en la hoja de cálculo. Guardando localmente...", err);
+        localStorage.setItem('unsynced_app_data', JSON.stringify(data));
         throw err;
+    }
+}
+
+export async function syncOfflineData() {
+    const unsynced = localStorage.getItem('unsynced_app_data');
+    if (unsynced) {
+        try {
+            const data = JSON.parse(unsynced);
+            await saveSpreadsheetData(data);
+            console.log("Datos offline sincronizados correctamente.");
+        } catch (e) {
+            console.error("Error intentando sincronizar datos offline.", e);
+        }
     }
 }

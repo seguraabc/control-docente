@@ -7,6 +7,7 @@ import CourseModal from './components/CourseModal';
 import CourseDetail from './components/CourseDetail';
 import SemesterSettingsModal from './components/SemesterSettingsModal';
 import ConfigurationNeededScreen from './components/ConfigurationNeededScreen';
+import CsvImporter from './components/CsvImporter';
 import { initGoogleClient, handleSignIn, handleSignOut, getSpreadsheetData, saveSpreadsheetData } from './services/googleSheetsService';
 import { GOOGLE_CONFIG } from './config';
 import { FullLogo } from './components/Logo';
@@ -86,6 +87,10 @@ const App: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [isSemesterModalOpen, setIsSemesterModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [hasUnsyncedData, setHasUnsyncedData] = useState(() => {
+    return !!localStorage.getItem('unsynced_app_data');
+  });
 
   useEffect(() => {
     const initialize = async () => {
@@ -160,6 +165,10 @@ const App: React.FC = () => {
       setIsSaving(true);
       saveSpreadsheetData(appData).then(() => {
         setTimeout(() => setIsSaving(false), 1000);
+        setHasUnsyncedData(false);
+      }).catch((err) => {
+        setIsSaving(false);
+        setHasUnsyncedData(true);
       });
     }
   }, [appData]);
@@ -181,6 +190,24 @@ const App: React.FC = () => {
   const handleOpenSemesterModal = useCallback(() => setIsSemesterModalOpen(true), []);
   const handleCloseSemesterModal = useCallback(() => setIsSemesterModalOpen(false), []);
   const handleSaveSemesterDates = useCallback((dates: SemesterDates) => { setSemesterDates(dates); handleCloseSemesterModal(); }, [handleCloseSemesterModal]);
+
+  const handleOpenImportModal = useCallback(() => setIsImportModalOpen(true), []);
+  const handleCloseImportModal = useCallback(() => setIsImportModalOpen(false), []);
+  const handleImportComplete = useCallback((importedData: Partial<AppData>) => {
+      setAppData(prev => {
+          if (!prev) return prev;
+          return {
+              ...prev,
+              courses: importedData.courses || prev.courses,
+              students: importedData.students || prev.students,
+              attendance: importedData.attendance || prev.attendance,
+              classSessions: importedData.classSessions || prev.classSessions,
+              evaluationInstances: importedData.evaluationInstances || prev.evaluationInstances,
+              grades: importedData.grades || prev.grades,
+          };
+      });
+      setIsImportModalOpen(false);
+  }, []);
 
   const handleSaveCourse = useCallback((courseToSave: Omit<Course, 'id' | 'status'>) => {
     if (editingCourse) {
@@ -386,6 +413,12 @@ const App: React.FC = () => {
           Guardando...
         </div>
       )}
+      {hasUnsyncedData && !isSaving && (
+        <div className="bg-amber-100 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-800 px-4 py-2 flex items-center justify-center text-amber-800 dark:text-amber-200 text-sm font-medium z-40">
+          <svg className="w-4 h-4 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+          Datos sin sincronizar. Los cambios se guardaron localmente y se enviarán al reconectar.
+        </div>
+      )}
       <main className="flex-grow p-4 sm:p-6 lg:p-8 w-full max-w-7xl mx-auto">
         {!selectedCourse ? (
           <Dashboard
@@ -396,6 +429,7 @@ const App: React.FC = () => {
             onSelectCourse={handleSelectCourse}
             onOpenSemesterModal={handleOpenSemesterModal}
             onDeleteCourse={handleDeleteCourse}
+            onOpenImportModal={handleOpenImportModal}
           />
         ) : (
           <CourseDetail
@@ -432,6 +466,9 @@ const App: React.FC = () => {
       )}
       {isSemesterModalOpen && (
         <SemesterSettingsModal currentDates={appData.semesterDates} onClose={handleCloseSemesterModal} onSave={handleSaveSemesterDates} />
+      )}
+      {isImportModalOpen && (
+        <CsvImporter onCancel={handleCloseImportModal} onImportComplete={handleImportComplete} />
       )}
     </div>
   );

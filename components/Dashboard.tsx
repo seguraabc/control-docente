@@ -11,9 +11,10 @@ interface DashboardProps {
   onSelectCourse: (id: string) => void;
   onOpenSemesterModal: () => void;
   onDeleteCourse: (id: string) => void;
+  onOpenImportModal?: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ courses, onAddCourse, onEditCourse, onArchiveCourse, onSelectCourse, onOpenSemesterModal, onDeleteCourse }) => {
+const Dashboard: React.FC<DashboardProps> = ({ courses, onAddCourse, onEditCourse, onArchiveCourse, onSelectCourse, onOpenSemesterModal, onDeleteCourse, onOpenImportModal }) => {
 
   // Lógica de ordenamiento automático por día de la semana
   const sortedActiveCourses = useMemo(() => {
@@ -57,6 +58,17 @@ const Dashboard: React.FC<DashboardProps> = ({ courses, onAddCourse, onEditCours
           >
             <CalendarIcon className="h-5 w-5" />
           </button>
+          
+          {onOpenImportModal && (
+            <button
+              onClick={onOpenImportModal}
+              className="flex items-center justify-center p-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 font-semibold rounded-lg shadow-sm border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-800/50 hover:text-emerald-800 dark:hover:text-emerald-300 transition-colors duration-200"
+              title="Importar CSV"
+              aria-label="Importar archivos CSV"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+            </button>
+          )}
         </div>
         <button
           onClick={onAddCourse}
