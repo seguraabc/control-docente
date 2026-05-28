@@ -80,17 +80,119 @@ const CsvImporter: React.FC<CsvImporterProps> = ({ onImportComplete, onCancel })
 
               const parsed = parseCSV(text);
               
+              if (parsed.length > 0) {
+                  const firstRow = parsed[0];
+                  const firstKey = Object.keys(firstRow)[0];
+                  const isMatrix = firstKey && (firstKey.toLowerCase().includes('estudiante') || firstKey.toLowerCase().includes('alumno') || name.includes('asistencia') || name.includes('calificacion'));
+
+                  if (isMatrix) {
+                      const isAttendance = name.includes('asistencia') || Object.keys(firstRow).some(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
+                      
+                      // Extraer un ID de curso estable a partir del nombre del archivo (ej. asistencia_ingles_2026 -> ingles)
+                      const coreNameMatch = name.match(/^(?:asistencia|calificaciones?)_(.+?)(?:_\d{4}-\d{2}-\d{2})?\.csv$/i);
+                      const coreName = coreNameMatch ? coreNameMatch[1] : name.replace('.csv', '');
+                      const courseId = `c_${encodeURIComponent(coreName).replace(/%/g, '').substring(0, 15)}`;
+                      const courseName = coreName.replace(/_/g, ' ').toUpperCase();
+
+                      if (!importedData.courses) importedData.courses = [];
+                      if (!importedData.courses.find(c => c.id === courseId)) {
+                          importedData.courses.push({
+                              id: courseId,
+                              name: `Recuperado: ${courseName}`,
+                              schedule: 'Sin horario',
+                              scheduleDays: [],
+                              status: 'activo'
+                          });
+                      }
+
+                      if (!importedData.students) importedData.students = [];
+                      
+                      const dataHeaders = Object.keys(firstRow).filter(k => k !== firstKey && k.trim() !== '');
+
+                      if (isAttendance) {
+                          if (!importedData.attendance) importedData.attendance = [];
+                          if (!importedData.classSessions) importedData.classSessions = [];
+                          
+                          dataHeaders.forEach(date => {
+                              if (!importedData.classSessions!.find(cs => cs.courseId === courseId && cs.date === date)) {
+                                  importedData.classSessions!.push({ courseId, date, taught: true });
+                              }
+                          });
+
+                          parsed.forEach(row => {
+                              const studentName = row[firstKey];
+                              if (!studentName) return;
+                              const studentId = `s_${encodeURIComponent(studentName).replace(/%/g, '').substring(0, 15)}`;
+                              
+                              if (!importedData.students!.find(s => s.id === studentId && s.courseId === courseId)) {
+                                  const parts = studentName.split(',');
+                                  importedData.students!.push({ 
+                                      id: studentId, 
+                                      courseId, 
+                                      lastName: parts[0]?.trim() || '',
+                                      firstName: parts[1]?.trim() || ''
+                                  });
+                              }
+                              
+                              dataHeaders.forEach(date => {
+                                  const status = row[date];
+                                  if (status === 'P' || status === 'A' || status === 'J') {
+                                      importedData.attendance!.push({ studentId, date, status });
+                                  }
+                              });
+                          });
+                      } else {
+                          // Matrices de Calificaciones
+                          if (!importedData.grades) importedData.grades = [];
+                          if (!importedData.evaluationInstances) importedData.evaluationInstances = [];
+                          
+                          const evalMap = new Map();
+                          dataHeaders.forEach((evalName, index) => {
+                              const evalId = `ev_${courseId}_${index}`;
+                              evalMap.set(evalName, evalId);
+                              if (!importedData.evaluationInstances!.find(ei => ei.id === evalId)) {
+                                  importedData.evaluationInstances!.push({ id: evalId, courseId, name: evalName, order: index });
+                              }
+                          });
+                          
+                          parsed.forEach(row => {
+                              const studentName = row[firstKey];
+                              if (!studentName) return;
+                              const studentId = `s_${encodeURIComponent(studentName).replace(/%/g, '').substring(0, 15)}`;
+                              
+                              if (!importedData.students!.find(s => s.id === studentId && s.courseId === courseId)) {
+                                  const parts = studentName.split(',');
+                                  importedData.students!.push({ 
+                                      id: studentId, 
+                                      courseId, 
+                                      lastName: parts[0]?.trim() || '',
+                                      firstName: parts[1]?.trim() || ''
+                                  });
+                              }
+                              
+                              dataHeaders.forEach(evalName => {
+                                  const val = row[evalName];
+                                  if (val && val !== 'N/A' && val.trim() !== '') {
+                                      importedData.grades!.push({ studentId, evaluationInstanceId: evalMap.get(evalName), value: val.trim() });
+                                  }
+                              });
+                          });
+                      }
+                      continue; // Si ya fue procesado como matriz, pasamos al siguiente archivo
+                  }
+              }
+
               if (name.includes('course')) {
                   importedData.courses = parsed.map(p => ({...p, scheduleDays: p.scheduleDays ? String(p.scheduleDays).split(/[,;]/).map(Number) : []})) as any;
               } else if (name.includes('student')) {
                   importedData.students = parsed as any;
-              } else if (name.includes('attendance')) {
+              } else if (name.includes('attendance') || name.includes('asistencia')) {
                   importedData.attendance = parsed as any;
-              } else if (name.includes('session') || name.includes('class')) {
+              } else if (name.includes('session') || name.includes('class') || name.includes('sesion')) {
                   importedData.classSessions = parsed.map(p => ({...p, taught: p.taught === 'true' || p.taught === 'TRUE'})) as any;
-              } else if (name.includes('evaluation')) {
+              } else if (name.includes('evaluation') || name.includes('evaluacion')) {
                   importedData.evaluationInstances = parsed.map(p => ({...p, order: Number(p.order)})) as any;
-              } else if (name.includes('grade')) {
+              } else if (name.includes('grade') || name.includes('calificacion')) {
                   importedData.grades = parsed as any;
               }
           }
